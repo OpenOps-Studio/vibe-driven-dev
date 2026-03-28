@@ -17,10 +17,18 @@
 
 Vibe Driven Dev is an agent-first framework for safe vibe coding.
 
-Install from npm:
+## Install
+
+Install globally with npm:
 
 ```bash
 npm install -g vibe-driven-dev
+```
+
+Run without global install:
+
+```bash
+npx vibe-driven-dev install claude-code --project
 ```
 
 It helps founders, product builders, and AI coding agents move from a fuzzy idea to a structured, handoff-ready project without falling into the usual traps:
