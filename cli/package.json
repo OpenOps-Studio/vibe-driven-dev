@@ -1,0 +1,14 @@
+{
+  "name": "vibe-cli",
+  "version": "0.1.0",
+  "description": "CLI for Vibe-Driven Development",
+  "type": "module",
+  "main": "dist/index.js",
+  "scripts": {
+    "build": "tsc",
+    "start": "node dist/index.js"
+  },
+  "dependencies": {
+    "commander": "^11.0.0"
+  }
+}
