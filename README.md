@@ -7,6 +7,7 @@
 ![License](https://img.shields.io/github/license/OpenOps-Studio/vibe-driven-dev?style=flat-square)
 ![Node](https://img.shields.io/badge/node-%3E%3D20-5fa04e?style=flat-square&logo=nodedotjs&logoColor=white)
 ![Runtime](https://img.shields.io/badge/runtime-TypeScript-3178c6?style=flat-square&logo=typescript&logoColor=white)
+![npm version](https://img.shields.io/npm/v/vibe-driven-dev?style=flat-square&logo=npm&logoColor=white)
 ![Stars](https://img.shields.io/github/stars/OpenOps-Studio/vibe-driven-dev?style=flat-square)
 ![Issues](https://img.shields.io/github/issues/OpenOps-Studio/vibe-driven-dev?style=flat-square)
 ![Last Commit](https://img.shields.io/github/last-commit/OpenOps-Studio/vibe-driven-dev?style=flat-square)
@@ -15,6 +16,12 @@
 ![Gemini CLI](https://img.shields.io/badge/target-Gemini%20CLI-1d4ed8?style=flat-square)
 
 Vibe Driven Dev is an agent-first framework for safe vibe coding.
+
+Install from npm:
+
+```bash
+npm install -g vibe-driven-dev
+```
 
 It helps founders, product builders, and AI coding agents move from a fuzzy idea to a structured, handoff-ready project without falling into the usual traps:
 
