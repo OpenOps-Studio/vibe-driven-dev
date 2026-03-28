@@ -1,0 +1,10 @@
+{
+  "id": "mvp-core",
+  "title": "MVP Core",
+  "summary": "Core delivery hardening for fast-moving MVP work where the user needs structure, debugging discipline, and basic regression safety.",
+  "primaryAgent": "planner",
+  "projectTypes": ["mvp", "saas", "wrapper-app"],
+  "recommendedStages": ["init", "plan", "research", "blueprint"],
+  "categories": ["planning", "debugging", "testing"],
+  "capabilities": ["find-skills", "systematic-debugging", "test-driven-development"]
+}

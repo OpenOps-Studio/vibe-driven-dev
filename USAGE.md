@@ -90,8 +90,8 @@ Important goals:
 6. Keep the installation clean. Do not add unnecessary files.
 7. Do not overwrite existing important project files without checking first.
 8. If Vibe Driven Dev is not installed yet, install or scaffold it in the correct way for this runtime.
-9. Then initialize the workflow and move the project into the VDD journey.
-10. After installation, run the first useful flow automatically.
+9. Then start guided onboarding and move the project into the VDD journey.
+10. After installation, begin a plain-language Q&A loop instead of expecting me to know commands.
 
 Your exact workflow:
 - Detect the runtime and installation surface.
@@ -100,12 +100,16 @@ Your exact workflow:
 - Create or update only the minimum required project-local files.
 - Set up the agent integration layer if supported.
 - Run environment checks.
-- Initialize VDD.
-- Start the workflow with:
-  - /vibe.init
-  - /vibe.plan
-  - /vibe.scaffold
-- Generate the core bootstrap files if available.
+- Read the repo-local guidance first:
+  - README.md
+  - INSTALL.md
+  - USAGE.md
+  - docs/architecture/guided-user-workflow.md
+- Start the workflow with /vibe.start.
+- Ask at most 5 to 7 simple onboarding questions in plain language.
+- Translate the answers into VDD state.
+- Continue into the first valid workflow steps once the intent is grounded.
+- Before PRD-heavy scaffold work, recommend a stronger model temporarily if that would materially improve the artifact quality.
 - Summarize what was installed, where it was installed, and what I should do next.
 
 Important constraints:
@@ -140,11 +144,10 @@ Your job:
 - use project-level setup, not user-level, unless project-level is impossible
 - keep the installation minimal and tidy
 - do not overwrite important files without warning me first
-- initialize the project workflow
-- then automatically begin:
-  - /vibe.init
-  - /vibe.plan
-  - /vibe.scaffold
+- start the guided workflow with /vibe.start
+- ask simple onboarding questions in plain language
+- continue into the first valid workflow steps once the project intent is clear
+- before PRD-heavy scaffold work, recommend a stronger model temporarily if that would clearly improve the result
 
 I am not technical, so explain each step in simple language.
 
@@ -173,12 +176,11 @@ Your tasks:
 1. Detect whether this runtime prefers AGENTS.md, project rules, custom agent files, or another native project-level setup.
 2. Install or scaffold Vibe Driven Dev accordingly.
 3. Keep the setup clean and understandable.
-4. Initialize the workflow and begin:
-   - /vibe.init
-   - /vibe.plan
-   - /vibe.scaffold
-5. Generate the bootstrap foundation if supported.
-6. Explain what you did in very simple language because I am a non-technical user.
+4. Start the guided workflow with /vibe.start.
+5. Ask simple onboarding questions in plain language and keep the question budget small.
+6. Continue into the first valid workflow steps only after the idea is grounded.
+7. Before PRD-heavy scaffold work, recommend a stronger model temporarily if that would clearly improve the result.
+8. Explain what you did in very simple language because I am a non-technical user.
 
 At the end, show:
 - detected runtime
@@ -206,12 +208,11 @@ Your tasks:
 - inspect the repository
 - determine the best Gemini CLI integration path
 - install or scaffold Vibe Driven Dev cleanly
-- initialize the project workflow
-- begin the first useful sequence:
-  - /vibe.init
-  - /vibe.plan
-  - /vibe.scaffold
-- generate the essential bootstrap files if supported
+- start the guided workflow with /vibe.start
+- ask simple onboarding questions in plain language
+- continue into the first valid workflow steps only after the idea is grounded
+- generate the essential bootstrap files when the workflow reaches scaffold
+- before PRD-heavy scaffold work, recommend a stronger model temporarily if that would clearly improve the result
 
 I am a non-technical user, so explain each step simply.
 

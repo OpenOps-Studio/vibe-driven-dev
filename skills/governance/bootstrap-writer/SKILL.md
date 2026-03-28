@@ -49,6 +49,11 @@ Generate the essential project setup files that move a project from design compl
 
 This skill is the primary worker for the **Intelligence Layer's Bootstrap capability**. It transforms validated project intent and architecture into the grounding documents that AI coding agents (like Spec-Kit or Claude Code) need to begin building without hallucinating or reinventing the wheel.
 
+Before generating PRD-heavy project truth, this skill should respect the model escalation policy:
+- if scaffold work is unusually writing-heavy or architecture-heavy, recommend a stronger model temporarily
+- do not block progress if the user stays on the current model
+- if the current model is kept, present the generated PRD as a draft rather than overstating its depth
+
 ## When to Use
 
 Use this skill when:

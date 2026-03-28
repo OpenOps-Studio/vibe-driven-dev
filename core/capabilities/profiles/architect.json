@@ -1,0 +1,9 @@
+{
+  "agent": "architect",
+  "ownsStages": ["research", "blueprint", "detail"],
+  "ownsCategories": ["frontend", "backend", "design", "AI integration", "MCP", "deployment", "performance"],
+  "internalSkills": ["vibe-blueprint", "stack-advisor", "ai-provider-selector", "decision-ledger"],
+  "externalCapabilities": ["impeccable", "mcp-builder", "next-best-practices", "shadcn"],
+  "escalatesTo": ["detailer", "qa-guardian"],
+  "summary": "Owns system boundaries, stack decisions, provider choices, and design-sensitive architecture direction."
+}

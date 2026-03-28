@@ -1,0 +1,10 @@
+{
+  "id": "execution-handoff",
+  "title": "Execution Handoff",
+  "summary": "Structured implementation bundle for projects that are ready to leave planning and enter a disciplined execution workflow.",
+  "primaryAgent": "handoff-manager",
+  "projectTypes": ["saas", "wrapper-app", "internal-tool", "mvp"],
+  "recommendedStages": ["detail", "scaffold", "qa", "handoff"],
+  "categories": ["planning", "docs", "testing"],
+  "capabilities": ["spec-kit", "systematic-debugging", "test-driven-development"]
+}

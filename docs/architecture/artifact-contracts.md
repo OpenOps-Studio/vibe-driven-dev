@@ -153,6 +153,9 @@ Design artifacts define the system shape and execution-ready details.
 - `architecture-baseline.md`
 - `system-boundaries.md`
 - `analytics-outline.md`
+- `Event-Architecture.md`
+- `Event-Catalog.md`
+- `Event-Contracts.md`
 - `technical-detail.md`
 - `validation-plan.md`
 - `execution-notes.md`
@@ -303,52 +306,67 @@ An artifact may go through four lifecycle states:
 - **Required for Stage Exit**: Yes
 - **Minimum Contents**: implementation constraints, important technical assumptions, major flows, unresolved detail risks.
 
-### 11. `validation-plan.md`
+### 11. `Event-Architecture.md`
+- **Stage Owner**: `blueprint`
+- **Required for Stage Exit**: Required when event relevance score >= 2.
+- **Minimum Contents**: why events exist, chosen topology, producer-consumer map, delivery expectations, failure handling expectations, correlation strategy, observability basics.
+
+### 12. `Event-Catalog.md`
+- **Stage Owner**: `detail`
+- **Required for Stage Exit**: Required when event relevance score >= 4.
+- **Minimum Contents**: event name, producer, consumers, trigger, business meaning, idempotency note.
+
+### 13. `Event-Contracts.md`
+- **Stage Owner**: `detail`
+- **Required for Stage Exit**: Required when event relevance score >= 4.
+- **Minimum Contents**: payload schema, metadata fields, versioning note, correlation ID, causation ID guidance, timestamp expectations.
+
+### 14. `validation-plan.md`
 - **Stage Owner**: `detail`
 - **Required for Stage Exit**: Yes
 - **Minimum Contents**: validation steps, what will be tested, what counts as acceptable behavior.
 
-### 12. `execution-notes.md`
+### 15. `execution-notes.md`
 - **Stage Owner**: `detail`
 - **Required for Stage Exit**: Recommended
 - **Minimum Contents**: execution guidance, important warnings, implementation caveats.
 
-### 13. `qa-report.md`
+### 16. `qa-report.md`
 - **Stage Owner**: `qa`
 - **Required for Stage Exit**: Yes
 - **Minimum Contents**: what was reviewed, what passed, what warned, what failed, readiness summary.
 
-### 14. `go-no-go.md`
+### 17. `go-no-go.md`
 - **Stage Owner**: `qa`
 - **Required for Stage Exit**: Yes
 - **Minimum Contents**: go or no-go decision, reasons, blockers if no-go, next corrective action.
 
-### 15. `decision-records/DEC-xxxx.json`
+### 18. `decision-records/DEC-xxxx.json`
 - **Stage Owner**: `cross-stage`
 - **Required for Stage Exit**: Conditionally required.
 - **Minimum Contents**: decision id, stage, owner, topic, context, assumptions, options considered, final choice, rationale, risks accepted, revisit conditions, status.
 
-### 16. `project-state.json`
+### 19. `project-state.json`
 - **Stage Owner**: `cross-stage`
 - **Required for Stage Exit**: Always required for stateful continuation.
 - **Minimum Contents**: project id, current stage, status, artifact inventory, assumption references, decision references, gate status, handoff readiness.
 
-### 17. `spec-handoff.md`
+### 20. `spec-handoff.md`
 - **Stage Owner**: `handoff`
 - **Required for Stage Exit**: Yes
 - **Minimum Contents**: project summary, current objective, relevant artifacts, major assumptions, major decisions, exact next execution entry.
 
-### 18. `execution-entry-summary.md`
+### 21. `execution-entry-summary.md`
 - **Stage Owner**: `handoff`
 - **Required for Stage Exit**: Yes
 - **Minimum Contents**: immediate next command or workflow entry, execution context, scope of next phase.
 
-### 19. `initial-decisions.json`
+### 22. `initial-decisions.json`
 - **Stage Owner**: `handoff`
 - **Required for Stage Exit**: Recommended
 - **Minimum Contents**: active decision references, summaries of decisions that affect execution.
 
-### 20. `assumptions-summary.md`
+### 23. `assumptions-summary.md`
 - **Stage Owner**: `handoff`
 - **Required for Stage Exit**: Recommended
 - **Minimum Contents**: open assumptions, validated assumptions, assumptions requiring ongoing caution.
@@ -376,6 +394,9 @@ templates/
     ├── architecture-baseline.md
     ├── system-boundaries.md
     ├── analytics-outline.md
+    ├── Event-Architecture.md
+    ├── Event-Catalog.md
+    ├── Event-Contracts.md
     ├── technical-detail.md
     ├── validation-plan.md
     ├── execution-notes.md

@@ -1,0 +1,10 @@
+{
+  "id": "frontend-polish",
+  "title": "Frontend Polish",
+  "summary": "Design-sensitive bundle for UI-heavy products that need stronger visual quality, component consistency, and frontend testing confidence.",
+  "primaryAgent": "architect",
+  "projectTypes": ["saas", "wrapper-app", "content-site", "mvp"],
+  "recommendedStages": ["blueprint", "detail", "scaffold"],
+  "categories": ["design", "frontend", "product polish"],
+  "capabilities": ["impeccable", "shadcn", "webapp-testing"]
+}

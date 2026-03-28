@@ -35,6 +35,19 @@ function printSection(title: string): void {
   console.log(chalk.bold.cyan(title));
 }
 
+function getRawRunCommand(commandParts: string[]): string {
+  const runIndex = process.argv.findIndex((value) => value === "run");
+
+  if (runIndex !== -1) {
+    const trailing = process.argv.slice(runIndex + 1);
+    if (trailing.length > 0) {
+      return trailing.join(" ");
+    }
+  }
+
+  return commandParts.join(" ");
+}
+
 program
   .name("vdd")
   .description(
@@ -437,12 +450,80 @@ program
 program
   .command("run")
   .description("Run a public Vibe Driven Dev command through the router.")
-  .argument("<command>", "Public VDD command such as /vibe.init or /vibe.plan")
-  .action(async (rawCommand: string) => {
+  .allowUnknownOption(true)
+  .argument("<commandParts...>", "Public VDD command such as /vibe.init or /vibe.skills --top 5")
+  .action(async (commandParts: string[]) => {
     try {
+      const rawCommand = getRawRunCommand(commandParts);
       const parsed = parser.parse(rawCommand);
 
       let state = await stateManager.load();
+
+      if (parsed.normalized === "/vibe.start") {
+        const result = router.run({
+          command: parsed.normalized,
+          state,
+          args: parsed.args,
+          projectRoot: process.cwd()
+        });
+
+        const onboarding = result.intelligence?.onboarding;
+
+        if (onboarding?.canInitializeState) {
+          if (!state) {
+            state = await stateManager.init({
+              platform: onboarding.seed.platform,
+              projectType: onboarding.seed.projectType,
+              problemStatement: onboarding.seed.problemStatement,
+              targetUser: onboarding.seed.targetUser,
+              successDefinition: onboarding.seed.successDefinition,
+              hasAiFeatures: onboarding.seed.hasAiFeatures,
+              deliveryPreference: onboarding.seed.deliveryPreference
+            });
+
+            state = await stateManager.update((current) => ({
+              ...current,
+              assumptions: Array.from(
+                new Set([
+                  ...current.assumptions,
+                  ...onboarding.seed.assumptions,
+                  ...onboarding.seed.constraints.map(
+                    (constraint) => `Constraint: ${constraint}`
+                  )
+                ])
+              )
+            }));
+          } else if (state.stage === "init") {
+            state = await stateManager.update((current) => ({
+              ...current,
+              platform: current.platform ?? onboarding.seed.platform,
+              projectType: current.projectType ?? onboarding.seed.projectType,
+              problemStatement: current.problemStatement ?? onboarding.seed.problemStatement,
+              targetUser: current.targetUser ?? onboarding.seed.targetUser,
+              successDefinition: current.successDefinition ?? onboarding.seed.successDefinition,
+              hasAiFeatures: current.hasAiFeatures ?? onboarding.seed.hasAiFeatures,
+              deliveryPreference: current.deliveryPreference ?? onboarding.seed.deliveryPreference,
+              assumptions: Array.from(
+                new Set([
+                  ...current.assumptions,
+                  ...onboarding.seed.assumptions,
+                  ...onboarding.seed.constraints.map(
+                    (constraint) => `Constraint: ${constraint}`
+                  )
+                ])
+              )
+            }));
+          }
+        }
+
+        printSection("VDD run");
+        printJson({
+          parsed,
+          result,
+          state: state ?? (await stateManager.load())
+        });
+        return;
+      }
 
       if (parsed.normalized === "/vibe.init") {
         if (!state) {
@@ -451,7 +532,9 @@ program
 
         const result = router.run({
           command: parsed.normalized,
-          state
+          state,
+          args: parsed.args,
+          projectRoot: process.cwd()
         });
 
         printSection("VDD run");
@@ -465,14 +548,16 @@ program
 
       if (!state) {
         console.log(chalk.red("No project state found."));
-        console.log("Run `vdd init` first.");
+        console.log("Run `vdd start` or `vdd init` first.");
         process.exitCode = 1;
         return;
       }
 
       const result = router.run({
         command: parsed.normalized,
-        state
+        state,
+        args: parsed.args,
+        projectRoot: process.cwd()
       });
 
       if (!result.ok) {

@@ -8,6 +8,7 @@ import {
   renderInstallManifest
 } from "./templates.js";
 import { loadPacks } from "../runtime/pack-loader.js";
+import { StateManager } from "../router/state-manager.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -63,16 +64,8 @@ export async function installGeneric(
 
   // Scaffold project-state.json if missing
   if (!(await fs.pathExists(paths.stateFile))) {
-    await fs.writeJson(
-      paths.stateFile,
-      {
-        vdd: true,
-        stage: "init",
-        status: "active",
-        createdAt: new Date().toISOString()
-      },
-      { spaces: 2 }
-    );
+    const stateManager = new StateManager({ projectRoot });
+    await stateManager.save(stateManager.createInitialState());
   }
 
   // Render and write all core agents to .vdd/agents/

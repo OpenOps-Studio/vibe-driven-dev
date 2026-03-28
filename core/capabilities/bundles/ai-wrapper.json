@@ -1,0 +1,10 @@
+{
+  "id": "ai-wrapper",
+  "title": "AI Wrapper",
+  "summary": "Capability set for AI-heavy wrapper apps that need tool integration discipline, testing confidence, and ecosystem discovery support.",
+  "primaryAgent": "architect",
+  "projectTypes": ["wrapper-app", "saas"],
+  "recommendedStages": ["plan", "research", "blueprint", "detail"],
+  "categories": ["AI integration", "MCP", "testing"],
+  "capabilities": ["find-skills", "mcp-builder", "systematic-debugging"]
+}

@@ -1,0 +1,9 @@
+{
+  "agent": "planner",
+  "ownsStages": ["init", "plan"],
+  "ownsCategories": ["planning"],
+  "internalSkills": ["vibe-plan", "assumptions-manager"],
+  "externalCapabilities": ["find-skills"],
+  "escalatesTo": ["researcher", "architect"],
+  "summary": "Owns product framing, scope shaping, and measurable planning truth."
+}

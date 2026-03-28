@@ -35,6 +35,97 @@ function ctx(
 // ─── Valid Transitions ───────────────────────────────────────────────────────
 
 describe("RouterEngine — valid transitions", () => {
+  it("/vibe.start begins onboarding without requiring state", () => {
+    const result = engine.run({
+      command: "/vibe.start",
+      state: null,
+      args: {
+        idea: "AI assistant for small sales teams that drafts outreach emails from new inbound leads",
+        "target-user": "small B2B sales teams",
+        "success-definition": "A rep can review a lead and send a good first draft in under three minutes",
+        delivery: "mvp"
+      }
+    });
+    expect(result.ok).toBe(true);
+    expect(result.resolvedSkill).toBe("onboarding-guide");
+    expect(result.intelligence?.onboarding?.canInitializeState).toBe(true);
+    expect(result.nextRecommendedCommand).toBe("/vibe.plan");
+  });
+
+  it("/vibe.start stays in Q&A mode when the idea is still too vague", () => {
+    const result = engine.run({
+      command: "/vibe.start",
+      state: null,
+      args: {
+        idea: "I want to build something useful"
+      }
+    });
+    expect(result.ok).toBe(true);
+    expect(result.intelligence?.onboarding?.needsMoreAnswers).toBe(true);
+    expect(result.nextRecommendedCommand).toBe("/vibe.start");
+    expect(result.delegation?.recommendedAgent).toBe("onboarding-guide");
+  });
+
+  it("/vibe.spec-quality is valid without requiring state", () => {
+    const result = engine.run({
+      command: "/vibe.spec-quality",
+      state: null,
+      projectRoot: "/Users/mamdouhaboammar/Downloads/gtm-maps-lite/vibe-driven-dev"
+    });
+    expect(result.ok).toBe(true);
+    expect(result.resolvedSkill).toBe("spec-quality-checker");
+    expect(result.intelligence?.specQuality?.clarityLevel).toBeDefined();
+    expect(result.nextRecommendedCommand).toBe("/vibe.init");
+  });
+
+  it("/vibe.events is valid without requiring state", () => {
+    const result = engine.run({
+      command: "/vibe.events",
+      state: null,
+      args: {
+        notifications: true,
+        webhooks: true
+      },
+      projectRoot: "/Users/mamdouhaboammar/Downloads/gtm-maps-lite/vibe-driven-dev"
+    });
+    expect(result.ok).toBe(true);
+    expect(result.resolvedSkill).toBe("event-architecture-planner");
+    expect(result.intelligence?.events?.relevance.requiresEventArchitecture).toBe(true);
+    expect(result.artifactsCreated).toContain("Event-Architecture.md");
+    expect(result.nextRecommendedCommand).toBe("/vibe.init");
+  });
+
+  it("/vibe.spec-quality recommends planning repair when clarity is weak", () => {
+    const result = engine.run({
+      command: "/vibe.spec-quality",
+      state: makeState({ stage: "blueprint" }),
+      projectRoot: "/Users/mamdouhaboammar/Downloads/gtm-maps-lite/vibe-driven-dev"
+    });
+    expect(result.ok).toBe(true);
+    expect(result.delegation?.recommendedAgent).toBe("planner");
+    expect(result.nextRecommendedCommand).toBe("/vibe.plan");
+  });
+
+  it("/vibe.spec-quality becomes usable with explicit problem framing inputs", () => {
+    const result = engine.run({
+      command: "/vibe.spec-quality",
+      state: makeState({
+        stage: "init",
+        targetUser: "sales teams",
+        successDefinition: "A rep can qualify a lead and generate an outreach draft in under three minutes.",
+        assumptions: ["Ship an MVP first", "Keep the flow inside a single web app"]
+      }),
+      args: {
+        problem: "Sales teams still qualify inbound leads manually and lose time before first outreach.",
+        "target-user": "Small B2B sales teams"
+      },
+      projectRoot: "/Users/mamdouhaboammar/Downloads/gtm-maps-lite/vibe-driven-dev"
+    });
+    expect(result.ok).toBe(true);
+    expect(result.intelligence?.specQuality?.score).toBeGreaterThanOrEqual(60);
+    expect(result.intelligence?.specQuality?.clarityLevel).not.toBe("blocked");
+  });
+
   it("/vibe.init runs without any state", () => {
     const result = engine.run(ctx("/vibe.init", null));
     expect(result.ok).toBe(true);
@@ -65,6 +156,23 @@ describe("RouterEngine — valid transitions", () => {
     expect(result.resolvedAgent).toBe("architect");
   });
 
+  it("/vibe.blueprint adds Event-Architecture.md when event relevance crosses threshold", () => {
+    const result = engine.run({
+      command: "/vibe.blueprint",
+      state: makeState({
+        stage: "research",
+        assumptions: ["This flow has webhooks and user notifications"]
+      }),
+      args: {
+        notifications: true,
+        webhooks: true
+      }
+    });
+    expect(result.ok).toBe(true);
+    expect(result.artifactsCreated).toContain("Event-Architecture.md");
+    expect(result.intelligence?.events?.relevance.requiresEventArchitecture).toBe(true);
+  });
+
   it("/vibe.detail runs from blueprint stage", () => {
     const result = engine.run(
       ctx("/vibe.detail", makeState({ stage: "blueprint" }))
@@ -73,12 +181,40 @@ describe("RouterEngine — valid transitions", () => {
     expect(result.resolvedAgent).toBe("detailer");
   });
 
+  it("/vibe.detail adds Event-Catalog.md and Event-Contracts.md for high-complexity event systems", () => {
+    const result = engine.run({
+      command: "/vibe.detail",
+      state: makeState({
+        stage: "blueprint",
+        successDefinition: "An AI workflow generates results asynchronously for users."
+      }),
+      args: {
+        "background-jobs": true,
+        notifications: true,
+        webhooks: true,
+        "ai-async-flows": true
+      }
+    });
+    expect(result.ok).toBe(true);
+    expect(result.artifactsCreated).toContain("Event-Catalog.md");
+    expect(result.artifactsCreated).toContain("Event-Contracts.md");
+    expect(result.intelligence?.events?.relevance.requiresEventCatalog).toBe(true);
+  });
+
   it("/vibe.scaffold runs from detail stage", () => {
     const result = engine.run(
-      ctx("/vibe.scaffold", makeState({ stage: "detail" }))
+      ctx(
+        "/vibe.scaffold",
+        makeState({
+          stage: "detail",
+          projectType: "saas",
+          hasAiFeatures: true
+        })
+      )
     );
     expect(result.ok).toBe(true);
     expect(result.resolvedSkill).toBe("vibe-scaffold");
+    expect(result.intelligence?.modelEscalation?.shouldRecommend).toBe(true);
   });
 
   it("/vibe.qa runs from scaffold stage", () => {
@@ -106,6 +242,42 @@ describe("RouterEngine — valid transitions", () => {
       );
       expect(result.ok).toBe(true);
     }
+  });
+
+  it("/vibe.skills is valid without requiring a stage transition", () => {
+    const result = engine.run(
+      ctx("/vibe.skills", makeState({ stage: "plan" }))
+    );
+    expect(result.ok).toBe(true);
+    expect(result.resolvedSkill).toBe("skill-recommender");
+    expect(result.intelligence?.skills?.recommendations.length).toBeGreaterThan(0);
+    expect(result.delegation?.currentOwner).toBe("orchestrator");
+  });
+
+  it("/vibe.events recommends architect ownership from research-stage event design", () => {
+    const result = engine.run({
+      command: "/vibe.events",
+      state: makeState({ stage: "research" }),
+      args: {
+        notifications: true,
+        webhooks: true
+      }
+    });
+    expect(result.ok).toBe(true);
+    expect(result.delegation?.recommendedAgent).toBe("architect");
+    expect(result.nextRecommendedCommand).toBe("/vibe.blueprint");
+  });
+
+  it("/vibe.skills exposes specialist ownership for bundle-guided recommendations", () => {
+    const result = engine.run({
+      command: "/vibe.skills",
+      state: makeState({ stage: "blueprint" }),
+      args: { bundle: "frontend-polish" },
+      projectRoot: "/Users/mamdouhaboammar/Downloads/gtm-maps-lite/vibe-driven-dev"
+    });
+    expect(result.ok).toBe(true);
+    expect(result.delegation?.recommendedAgent).toBe("architect");
+    expect(result.intelligence?.skills?.recommendedSpecialists[0]?.agent).toBe("architect");
   });
 
   it("/vibe.next is always valid", () => {
@@ -199,6 +371,17 @@ describe("RouterEngine — null state handling", () => {
     const result = engine.run(ctx("/vibe.qa", null));
     expect(result.ok).toBe(false);
   });
+
+  it("allows /vibe.skills when no state exists", () => {
+    const result = engine.run(ctx("/vibe.skills", null));
+    expect(result.ok).toBe(true);
+    expect(result.nextRecommendedCommand).toBe("/vibe.init");
+  });
+
+  it("allows /vibe.start when no state exists", () => {
+    const result = engine.run(ctx("/vibe.start", null));
+    expect(result.ok).toBe(true);
+  });
 });
 
 // ─── Next Recommendation ─────────────────────────────────────────────────────
@@ -208,6 +391,7 @@ describe("RouterEngine — /vibe.next recommendation", () => {
     const result = engine.run(ctx("/vibe.next", makeState({ stage: "init" })));
     expect(result.ok).toBe(true);
     expect(result.nextRecommendedCommand).toBe("/vibe.plan");
+    expect(result.delegation?.recommendedAgent).toBe("planner");
   });
 
   it("recommends /vibe.research after plan", () => {

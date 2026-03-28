@@ -68,6 +68,26 @@ Vibe Driven Dev exists to slow down the right part and speed up the useful part.
 It does not try to replace coding agents.
 It helps them work with cleaner context, better decisions, and stronger project foundations.
 
+## What problems it solves
+
+VDD is built around recurring vibe-coding failures, not generic AI hype.
+
+The core problem areas are:
+
+- spec blindness
+- context rot
+- decomposition deficit
+- manager crisis
+- invisible technical debt
+- no technical ownership
+- weak failure-mode review
+- premature complexity
+- missing validation and observability
+- unusable handoff
+- wrong external skills installed
+
+The formal matrix that maps these failures to VDD features lives in [docs/architecture/problem-to-feature-matrix.md](./docs/architecture/problem-to-feature-matrix.md).
+
 ## Who this is for
 
 - founders building MVPs or PoCs

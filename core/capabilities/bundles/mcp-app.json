@@ -1,0 +1,10 @@
+{
+  "id": "mcp-app",
+  "title": "MCP App",
+  "summary": "Bundle for tool-connected apps that depend on MCP or agent-facing integration surfaces and need stronger backend and debugging support.",
+  "primaryAgent": "architect",
+  "projectTypes": ["wrapper-app", "saas", "internal-tool"],
+  "recommendedStages": ["research", "blueprint", "detail", "qa"],
+  "categories": ["MCP", "AI integration", "backend"],
+  "capabilities": ["mcp-builder", "systematic-debugging", "test-driven-development"]
+}

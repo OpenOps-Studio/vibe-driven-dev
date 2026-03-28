@@ -97,6 +97,8 @@ But it must not silently mutate the journey into a different process.
 
 The intelligence layer should support six major capabilities.
 
+It should now support event relevance and event topology guidance as well.
+
 ## 1. Stack Selection Intelligence
 
 This capability helps the system determine the most suitable product stack for a given project.
@@ -232,6 +234,46 @@ These may include:
 - reusable governance patterns
 
 Everything else should remain archived or learning-only unless explicitly promoted.
+
+## 7. Event Relevance Intelligence
+
+This capability helps the system determine whether the current project actually needs explicit event architecture.
+
+It should consider:
+- background jobs
+- notifications
+- webhooks
+- audit logging
+- analytics side effects
+- AI async flows
+- multiple consumers of the same business action
+- external integrations
+- whether eventual consistency is acceptable
+
+It should produce:
+- an event relevance score
+- matched signals
+- whether event architecture is required
+- whether event catalog and contracts are required
+
+## 8. Event Topology Intelligence
+
+This capability helps the system choose the smallest honest event topology once events are justified.
+
+It should recommend between:
+- no bus
+- internal app events
+- queue plus workers
+- pub/sub bus
+- event stream
+
+It should also define the minimum rules the project must make explicit:
+- correlation IDs
+- idempotency
+- retries
+- dead-letter handling
+- ordering assumptions
+- schema/versioning expectations where needed
 
 ## Intelligence Layer and MCP
 

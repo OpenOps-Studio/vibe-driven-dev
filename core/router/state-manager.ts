@@ -34,8 +34,12 @@ export const projectStateSchema = z.object({
   stage: stageSchema,
   status: statusSchema,
   platform: z.string().optional(),
+  projectType: z.string().optional(),
+  problemStatement: z.string().optional(),
   targetUser: z.string().optional(),
   successDefinition: z.string().optional(),
+  hasAiFeatures: z.boolean().optional(),
+  deliveryPreference: z.union([z.literal("mvp"), z.literal("foundation")]).optional(),
   assumptions: z.array(z.string()),
   decisions: z.array(z.string()),
   artifacts: z.array(z.string()),
@@ -57,6 +61,57 @@ export interface StateManagerOptions {
   stateFilePath?: string;
 }
 
+function normalizeLegacyState(input: unknown): unknown {
+  if (!input || typeof input !== "object") {
+    return input;
+  }
+
+  const candidate = input as Record<string, unknown>;
+  if (
+    typeof candidate.projectId === "string" &&
+    Array.isArray(candidate.assumptions) &&
+    Array.isArray(candidate.decisions) &&
+    Array.isArray(candidate.artifacts) &&
+    candidate.gates &&
+    candidate.handoff
+  ) {
+    return candidate;
+  }
+
+  return {
+    projectId: typeof candidate.projectId === "string" && candidate.projectId.length > 0
+      ? candidate.projectId
+      : "proj_local",
+    stage: candidate.stage,
+    status: candidate.status,
+    platform: typeof candidate.platform === "string" ? candidate.platform : undefined,
+    projectType: typeof candidate.projectType === "string" ? candidate.projectType : undefined,
+    problemStatement:
+      typeof candidate.problemStatement === "string" ? candidate.problemStatement : undefined,
+    targetUser: typeof candidate.targetUser === "string" ? candidate.targetUser : undefined,
+    successDefinition:
+      typeof candidate.successDefinition === "string" ? candidate.successDefinition : undefined,
+    hasAiFeatures:
+      typeof candidate.hasAiFeatures === "boolean" ? candidate.hasAiFeatures : undefined,
+    deliveryPreference:
+      candidate.deliveryPreference === "mvp" || candidate.deliveryPreference === "foundation"
+        ? candidate.deliveryPreference
+        : undefined,
+    assumptions: [],
+    decisions: [],
+    artifacts: [],
+    gates: {
+      security: "pending",
+      measurement: "pending",
+      realityCheck: "pending"
+    },
+    handoff: {
+      target: "spec-kit",
+      ready: false
+    }
+  };
+}
+
 export class StateManager {
   private readonly projectRoot: string;
   private readonly stateFilePath: string;
@@ -74,17 +129,25 @@ export class StateManager {
 
   createInitialState(input?: {
     projectId?: string;
-    platform?: string;
-    targetUser?: string;
-    successDefinition?: string;
+    platform?: string | undefined;
+    projectType?: string | undefined;
+    problemStatement?: string | undefined;
+    targetUser?: string | undefined;
+    successDefinition?: string | undefined;
+    hasAiFeatures?: boolean | undefined;
+    deliveryPreference?: "mvp" | "foundation" | undefined;
   }): ProjectState {
     return {
       projectId: input?.projectId ?? "proj_local",
       stage: "init",
       status: "active",
       platform: input?.platform,
+      projectType: input?.projectType,
+      problemStatement: input?.problemStatement,
       targetUser: input?.targetUser,
       successDefinition: input?.successDefinition,
+      hasAiFeatures: input?.hasAiFeatures,
+      deliveryPreference: input?.deliveryPreference,
       assumptions: [],
       decisions: [],
       artifacts: [],
@@ -116,7 +179,7 @@ export class StateManager {
 
     const raw = await fs.readFile(this.stateFilePath, "utf8");
     const parsed = JSON.parse(raw) as unknown;
-    return projectStateSchema.parse(parsed);
+    return projectStateSchema.parse(normalizeLegacyState(parsed));
   }
 
   async save(state: ProjectState): Promise<void> {
@@ -127,9 +190,13 @@ export class StateManager {
 
   async init(input?: {
     projectId?: string;
-    platform?: string;
-    targetUser?: string;
-    successDefinition?: string;
+    platform?: string | undefined;
+    projectType?: string | undefined;
+    problemStatement?: string | undefined;
+    targetUser?: string | undefined;
+    successDefinition?: string | undefined;
+    hasAiFeatures?: boolean | undefined;
+    deliveryPreference?: "mvp" | "foundation" | undefined;
   }): Promise<ProjectState> {
     const state = this.createInitialState(input);
     await this.save(state);

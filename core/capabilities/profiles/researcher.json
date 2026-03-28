@@ -1,0 +1,9 @@
+{
+  "agent": "researcher",
+  "ownsStages": ["plan", "research"],
+  "ownsCategories": ["debugging", "docs", "security"],
+  "internalSkills": ["vibe-research"],
+  "externalCapabilities": ["find-skills", "systematic-debugging"],
+  "escalatesTo": ["architect", "qa-guardian"],
+  "summary": "Owns risk discovery, alternatives, and evidence gathering before major design decisions."
+}

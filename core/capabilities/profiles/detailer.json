@@ -1,0 +1,9 @@
+{
+  "agent": "detailer",
+  "ownsStages": ["blueprint", "detail", "scaffold"],
+  "ownsCategories": ["auth", "database", "testing", "performance", "security"],
+  "internalSkills": ["vibe-detail"],
+  "externalCapabilities": ["better-auth-best-practices", "webapp-testing", "test-driven-development", "systematic-debugging"],
+  "escalatesTo": ["architect", "qa-guardian"],
+  "summary": "Owns execution-ready detail, validation planning, and targeted hardening before scaffold and QA."
+}

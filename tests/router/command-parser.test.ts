@@ -4,6 +4,31 @@ import { CommandParser } from "../../core/router/command-parser.js";
 const parser = new CommandParser();
 
 describe("CommandParser — valid command parsing", () => {
+  it("parses /vibe.start correctly", () => {
+    const result = parser.parse("/vibe.start --idea AI copilot for sales teams");
+    expect(result.normalized).toBe("/vibe.start");
+    expect(result.action).toBe("start");
+    expect(result.args["idea"]).toBe("AI copilot for sales teams");
+  });
+
+  it("parses /vibe.spec-quality correctly", () => {
+    const result = parser.parse(
+      "/vibe.spec-quality --problem=lead-routing-manual --target-user sales-teams"
+    );
+    expect(result.normalized).toBe("/vibe.spec-quality");
+    expect(result.action).toBe("spec-quality");
+    expect(result.args["problem"]).toBe("lead-routing-manual");
+    expect(result.args["target-user"]).toBe("sales-teams");
+  });
+
+  it("parses /vibe.events correctly", () => {
+    const result = parser.parse("/vibe.events --notifications true --webhooks true");
+    expect(result.normalized).toBe("/vibe.events");
+    expect(result.action).toBe("events");
+    expect(result.args["notifications"]).toBe("true");
+    expect(result.args["webhooks"]).toBe("true");
+  });
+
   it("parses /vibe.init correctly", () => {
     const result = parser.parse("/vibe.init");
     expect(result.normalized).toBe("/vibe.init");
@@ -28,9 +53,19 @@ describe("CommandParser — valid command parsing", () => {
     expect(result.action).toBe("handoff-to-spec");
   });
 
+  it("parses /vibe.skills correctly", () => {
+    const result = parser.parse("/vibe.skills --top 5 --category testing");
+    expect(result.normalized).toBe("/vibe.skills");
+    expect(result.action).toBe("skills");
+    expect(result.args).toEqual({ top: "5", category: "testing" });
+  });
+
   it("parses all valid journey commands", () => {
     const commands = [
+      "/vibe.start",
       "/vibe.init",
+      "/vibe.spec-quality",
+      "/vibe.events",
       "/vibe.plan",
       "/vibe.research",
       "/vibe.blueprint",
@@ -40,6 +75,7 @@ describe("CommandParser — valid command parsing", () => {
       "/vibe.next",
       "/vibe.resume",
       "/vibe.status",
+      "/vibe.skills",
       "/vibe.assumptions",
       "/vibe.decide",
       "/vibe.handoff-to-spec",
@@ -52,20 +88,34 @@ describe("CommandParser — valid command parsing", () => {
 });
 
 describe("CommandParser — alias parsing", () => {
-  it("resolves /start.vibe → /vibe.init", () => {
+  it("resolves /start.vibe → /vibe.start", () => {
     const result = parser.parse("/start.vibe");
-    expect(result.normalized).toBe("/vibe.init");
-    expect(result.action).toBe("init");
+    expect(result.normalized).toBe("/vibe.start");
+    expect(result.action).toBe("start");
   });
 
-  it("resolves /vibe.start → /vibe.init", () => {
+  it("resolves /vibe.spec → /vibe.spec-quality", () => {
+    const result = parser.parse("/vibe.spec");
+    expect(result.normalized).toBe("/vibe.spec-quality");
+    expect(result.action).toBe("spec-quality");
+  });
+
+  it("resolves /vibe.event → /vibe.events", () => {
+    const result = parser.parse("/vibe.event");
+    expect(result.normalized).toBe("/vibe.events");
+    expect(result.action).toBe("events");
+  });
+
+  it("keeps /vibe.start as a first-class command", () => {
     const result = parser.parse("/vibe.start");
-    expect(result.normalized).toBe("/vibe.init");
+    expect(result.normalized).toBe("/vibe.start");
+    expect(result.action).toBe("start");
   });
 
-  it("resolves /vibe.begin → /vibe.init", () => {
+  it("resolves /vibe.begin → /vibe.start", () => {
     const result = parser.parse("/vibe.begin");
-    expect(result.normalized).toBe("/vibe.init");
+    expect(result.normalized).toBe("/vibe.start");
+    expect(result.action).toBe("start");
   });
 
   it("resolves /vibe.handoff → /vibe.handoff-to-spec", () => {
@@ -88,6 +138,14 @@ describe("CommandParser — argument parsing", () => {
   it("parses --key value as pair", () => {
     const result = parser.parse("/vibe.init --id my-proj");
     expect(result.args["id"]).toBe("my-proj");
+  });
+
+  it("preserves multi-word values until the next flag", () => {
+    const result = parser.parse(
+      "/vibe.spec-quality --problem Sales teams still route leads manually --target-user B2B sales teams"
+    );
+    expect(result.args["problem"]).toBe("Sales teams still route leads manually");
+    expect(result.args["target-user"]).toBe("B2B sales teams");
   });
 
   it("parses multiple flags", () => {

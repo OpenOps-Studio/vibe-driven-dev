@@ -22,6 +22,7 @@ outputs:
   - architecture-baseline.md
   - system-boundaries.md
   - analytics-outline.md
+  - Event-Architecture.md
 gates:
   before:
     - execution-reality-check
@@ -54,6 +55,7 @@ It should clarify:
 - what is outside system responsibility
 - how the core flows are expected to work
 - how success and behavior can later be measured
+- whether the project needs explicit event architecture before detail design continues
 
 ## When to Use
 
@@ -126,9 +128,12 @@ All meaningful design assumptions must remain visible.
    - what external services or dependencies it relies on
    - what is intentionally excluded
 6. Outline a measurement or analytics direction that connects back to success definition.
-7. Keep visible any design risks, overengineering risk, or trust-boundary uncertainty.
-8. Persist the blueprint artifacts.
-9. Recommend `/vibe.detail` as the next valid step.
+7. Run an event relevance check:
+   - if the project has at least two event-relevance signals, create `Event-Architecture.md`
+   - if not, explicitly record that event architecture is not justified yet
+8. Keep visible any design risks, overengineering risk, trust-boundary uncertainty, or event-topology uncertainty.
+9. Persist the blueprint artifacts.
+10. Recommend `/vibe.detail` as the next valid step.
 
 ## Output Contract
 
@@ -159,6 +164,18 @@ Minimum required contents:
 - how success could be measured after implementation
 - what should be visible to validate the system in reality
 
+### `Event-Architecture.md`
+Create or update the event architecture artifact when event relevance score >= 2.
+
+Minimum required contents:
+- why events exist in this project
+- chosen topology
+- producer and consumer map
+- delivery expectations
+- retry, dead-letter, or failure-handling expectations
+- correlation strategy
+- observability basics
+
 ## Halt Conditions
 
 This skill must halt when:
@@ -169,6 +186,7 @@ This skill must halt when:
 - the project is attempting to skip research grounding
 - the design would clearly overbuild the stated objective
 - core trust boundaries remain invisible
+- the project clearly needs explicit event architecture but the artifact is still missing
 - the runtime cannot persist blueprint artifacts safely
 
 ## Handoff Behavior

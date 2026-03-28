@@ -5,6 +5,7 @@ import { resolveVddPaths, resolveAgentInstallPath } from "./paths.js";
 import { renderAllAgentTemplates, renderInstallManifest } from "./templates.js";
 import { loadPacks } from "../runtime/pack-loader.js";
 import type { InstallScope } from "./target-types.js";
+import { StateManager } from "../router/state-manager.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -54,16 +55,8 @@ export async function installClaude(
 
   // 2. Scaffold project-state.json if missing
   if (!(await fs.pathExists(paths.stateFile))) {
-    await fs.writeJson(
-      paths.stateFile,
-      {
-        vdd: true,
-        stage: "init",
-        status: "active",
-        createdAt: new Date().toISOString()
-      },
-      { spaces: 2 }
-    );
+    const stateManager = new StateManager({ projectRoot });
+    await stateManager.save(stateManager.createInitialState());
   }
 
   // 3. Ensure target agents directory exists

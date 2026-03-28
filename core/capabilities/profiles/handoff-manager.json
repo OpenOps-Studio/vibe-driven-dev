@@ -1,0 +1,9 @@
+{
+  "agent": "handoff-manager",
+  "ownsStages": ["qa", "handoff"],
+  "ownsCategories": ["planning", "docs", "testing"],
+  "internalSkills": ["vibe-handoff-to-spec", "decision-ledger"],
+  "externalCapabilities": ["spec-kit"],
+  "escalatesTo": [],
+  "summary": "Owns truthful execution packaging and structured transfer into Spec-Kit-style downstream execution."
+}

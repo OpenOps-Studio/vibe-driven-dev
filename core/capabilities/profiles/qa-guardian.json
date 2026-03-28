@@ -1,0 +1,9 @@
+{
+  "agent": "qa-guardian",
+  "ownsStages": ["scaffold", "qa"],
+  "ownsCategories": ["testing", "debugging", "security", "performance"],
+  "internalSkills": ["vibe-qa"],
+  "externalCapabilities": ["systematic-debugging", "test-driven-development", "webapp-testing"],
+  "escalatesTo": ["handoff-manager"],
+  "summary": "Owns quality gates, readiness checks, and confidence before downstream execution handoff."
+}

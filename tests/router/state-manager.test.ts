@@ -85,6 +85,23 @@ describe("StateManager — load reads valid state", () => {
     expect(loaded?.stage).toBe("init");
   });
 
+  it("upgrades legacy install state into the canonical schema", async () => {
+    const statePath = path.join(tmpDir, ".vdd", "project-state.json");
+    await fs.ensureDir(path.dirname(statePath));
+    await fs.writeJson(statePath, {
+      vdd: true,
+      stage: "init",
+      status: "active",
+      createdAt: "2026-03-28T00:00:00.000Z"
+    });
+
+    const loaded = await sm.load();
+    expect(loaded?.projectId).toBe("proj_local");
+    expect(loaded?.assumptions).toEqual([]);
+    expect(loaded?.gates.security).toBe("pending");
+    expect(loaded?.handoff.ready).toBe(false);
+  });
+
   it("exists() returns false before init", async () => {
     expect(await sm.exists()).toBe(false);
   });

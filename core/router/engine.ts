@@ -1,8 +1,32 @@
 import { StackSelector, StackRecommendation } from "../intelligence/stack-selector.js";
 import { ProviderSelector, ProviderRecommendation } from "../intelligence/provider-selector.js";
 import { BootstrapPlanner, BootstrapPlan } from "../intelligence/bootstrap-planner.js";
+import {
+  SpecQualityEngine,
+  type SpecQualityAssessment
+} from "../intelligence/spec-quality-engine.js";
+import {
+  SkillRecommender,
+  type SkillRecommendationResult
+} from "../intelligence/skill-recommender.js";
+import {
+  EventTopologyAdvisor,
+  type EventTopologyAdvice
+} from "../intelligence/event-topology-advisor.js";
+import {
+  OnboardingEngine,
+  type OnboardingAssessment
+} from "../intelligence/onboarding-engine.js";
+import {
+  ModelEscalationAdvisor,
+  type ModelEscalationAdvice
+} from "../intelligence/model-escalation-advisor.js";
+import { resolveInstallTarget } from "../install/registry.js";
 
 export type VddPublicCommand =
+  | "/vibe.start"
+  | "/vibe.spec-quality"
+  | "/vibe.events"
   | "/vibe.init"
   | "/vibe.plan"
   | "/vibe.research"
@@ -13,6 +37,7 @@ export type VddPublicCommand =
   | "/vibe.next"
   | "/vibe.resume"
   | "/vibe.status"
+  | "/vibe.skills"
   | "/vibe.assumptions"
   | "/vibe.decide"
   | "/vibe.handoff-to-spec";
@@ -42,8 +67,12 @@ export interface ProjectState {
   stage: VddStage;
   status: VddStatus;
   platform?: string | undefined;
+  projectType?: string | undefined;
+  problemStatement?: string | undefined;
   targetUser?: string | undefined;
   successDefinition?: string | undefined;
+  hasAiFeatures?: boolean | undefined;
+  deliveryPreference?: "mvp" | "foundation" | undefined;
   assumptions: string[];
   decisions: string[];
   artifacts: string[];
@@ -61,6 +90,8 @@ export interface ProjectState {
 export interface RoutingContext {
   command: VddPublicCommand;
   state: ProjectState | null;
+  args?: Record<string, string | boolean>;
+  projectRoot?: string;
 }
 
 export interface RoutingResult {
@@ -77,10 +108,21 @@ export interface RoutingResult {
   blockers: string[];
   nextRecommendedCommand: VddPublicCommand | null;
   message: string;
+  delegation?: {
+    currentOwner: string | null;
+    recommendedAgent: string | null;
+    nextCommandOwner: string | null;
+    why: string[];
+  } | undefined;
   intelligence?: {
     stack?: StackRecommendation;
     provider?: ProviderRecommendation;
     bootstrap?: BootstrapPlan;
+    onboarding?: OnboardingAssessment;
+    specQuality?: SpecQualityAssessment;
+    skills?: SkillRecommendationResult;
+    events?: EventTopologyAdvice;
+    modelEscalation?: ModelEscalationAdvice;
   } | undefined;
 }
 
@@ -105,6 +147,22 @@ const STAGE_COMMAND_MAP: Partial<Record<VddStage, VddPublicCommand>> = {
   qa: "/vibe.qa",
   handoff: "/vibe.handoff-to-spec"
 };
+
+function inferProjectType(
+  state: ProjectState | null
+): "saas" | "internal-tool" | "mvp" | "content-site" | "wrapper-app" {
+  if (
+    state?.projectType === "saas" ||
+    state?.projectType === "internal-tool" ||
+    state?.projectType === "mvp" ||
+    state?.projectType === "content-site" ||
+    state?.projectType === "wrapper-app"
+  ) {
+    return state.projectType;
+  }
+
+  return "mvp";
+}
 
 function createInitialState(): ProjectState {
   return {
@@ -145,9 +203,13 @@ function recommendNext(stage: VddStage): VddPublicCommand | null {
 function resolveAgent(command: VddPublicCommand): string | null {
   switch (command) {
     case "/vibe.init":
+    case "/vibe.start":
+    case "/vibe.spec-quality":
+    case "/vibe.events":
     case "/vibe.next":
     case "/vibe.resume":
     case "/vibe.status":
+    case "/vibe.skills":
       return "orchestrator";
 
     case "/vibe.plan":
@@ -180,10 +242,30 @@ function resolveAgent(command: VddPublicCommand): string | null {
   }
 }
 
+function createDelegationHint(
+  currentOwner: string | null,
+  nextCommand: VddPublicCommand | null,
+  recommendedAgent: string | null,
+  why: string[]
+): NonNullable<RoutingResult["delegation"]> {
+  return {
+    currentOwner,
+    recommendedAgent,
+    nextCommandOwner: nextCommand ? resolveAgent(nextCommand) : null,
+    why
+  };
+}
+
 function resolveSkill(command: VddPublicCommand): string | null {
   switch (command) {
+    case "/vibe.start":
+      return "onboarding-guide";
     case "/vibe.init":
       return "vibe-init";
+    case "/vibe.spec-quality":
+      return "spec-quality-checker";
+    case "/vibe.events":
+      return "event-architecture-planner";
     case "/vibe.plan":
       return "vibe-plan";
     case "/vibe.research":
@@ -202,6 +284,8 @@ function resolveSkill(command: VddPublicCommand): string | null {
       return "vibe-resume";
     case "/vibe.status":
       return "vibe-status";
+    case "/vibe.skills":
+      return "skill-recommender";
     case "/vibe.assumptions":
       return "assumptions-manager";
     case "/vibe.decide":
@@ -238,10 +322,36 @@ function commandToExpectedStage(command: VddPublicCommand): VddStage | null {
 
 function isReadOnlyCommand(command: VddPublicCommand): boolean {
   return (
+    command === "/vibe.start" ||
+    command === "/vibe.spec-quality" ||
+    command === "/vibe.events" ||
     command === "/vibe.status" ||
+    command === "/vibe.skills" ||
     command === "/vibe.resume" ||
     command === "/vibe.assumptions"
   );
+}
+
+function buildOnboardingAssessment(
+  state: ProjectState | null,
+  args?: Record<string, string | boolean>
+): OnboardingAssessment {
+  return new OnboardingEngine().assess({
+    state,
+    args
+  });
+}
+
+function buildSpecQualityAssessment(
+  projectRoot: string | undefined,
+  state: ProjectState | null,
+  args?: Record<string, string | boolean>
+): SpecQualityAssessment {
+  return new SpecQualityEngine().assess({
+    projectRoot: projectRoot ?? process.cwd(),
+    state,
+    args
+  });
 }
 
 function validateTransition(
@@ -254,6 +364,10 @@ function validateTransition(
     return { valid: true, blockers };
   }
 
+  if (command === "/vibe.next" || command === "/vibe.decide" || isReadOnlyCommand(command)) {
+    return { valid: true, blockers };
+  }
+
   if (!state) {
     blockers.push("No project state is loaded. Run /vibe.init first.");
     return { valid: false, blockers };
@@ -262,10 +376,6 @@ function validateTransition(
   if (state.status === "failed") {
     blockers.push("Project state is failed and requires recovery before continuing.");
     return { valid: false, blockers };
-  }
-
-  if (command === "/vibe.next" || command === "/vibe.decide" || isReadOnlyCommand(command)) {
-    return { valid: true, blockers };
   }
 
   const expectedStage = commandToExpectedStage(command);
@@ -333,6 +443,179 @@ function simulateArtifacts(command: VddPublicCommand): string[] {
   }
 }
 
+function inferRuntimeTarget(
+  projectRoot: string | undefined,
+  state: ProjectState | null,
+  args?: Record<string, string | boolean>
+): SkillRecommendationResult["detectedRuntime"] {
+  const runtimeArg =
+    typeof args?.runtime === "string"
+      ? args.runtime
+      : typeof args?.target === "string"
+      ? args.target
+      : typeof args?.agent === "string"
+      ? args.agent
+      : undefined;
+
+  if (runtimeArg) {
+    return resolveInstallTarget(runtimeArg)?.id ?? "unknown";
+  }
+
+  if (projectRoot) {
+    return new SkillRecommender().detectRuntimeTarget(projectRoot);
+  }
+
+  if (state?.platform) {
+    return resolveInstallTarget(state.platform)?.id ?? "unknown";
+  }
+
+  return "unknown";
+}
+
+function buildSkillRecommendation(
+  projectRoot: string | undefined,
+  state: ProjectState | null,
+  args?: Record<string, string | boolean>
+): SkillRecommendationResult {
+  const top =
+    typeof args?.top === "string" && Number.isFinite(Number(args.top))
+      ? Number(args.top)
+      : undefined;
+  const mode =
+    args?.install === true
+      ? "install"
+      : args?.explain === true || typeof args?.category === "string" || typeof args?.gap === "string"
+      ? "explain"
+      : "recommend";
+  const recommender = new SkillRecommender();
+
+  return recommender.recommend({
+    runtimeTarget: inferRuntimeTarget(projectRoot, state, args),
+    top,
+    mode,
+    bundle: typeof args?.bundle === "string" ? args.bundle : undefined,
+    category: typeof args?.category === "string" ? args.category : undefined,
+    gap: typeof args?.gap === "string" ? args.gap : undefined,
+    installedSkills: [],
+    project: recommender.buildProjectInput(projectRoot ?? process.cwd(), state)
+  });
+}
+
+function readBooleanArg(
+  args: Record<string, string | boolean> | undefined,
+  key: string
+): boolean | undefined {
+  const value = args?.[key];
+
+  if (typeof value === "boolean") {
+    return value;
+  }
+
+  if (typeof value === "string") {
+    const normalized = value.trim().toLowerCase();
+    if (["true", "yes", "1"].includes(normalized)) {
+      return true;
+    }
+
+    if (["false", "no", "0"].includes(normalized)) {
+      return false;
+    }
+  }
+
+  return undefined;
+}
+
+function buildEventTopologyAdvice(
+  state: ProjectState | null,
+  args?: Record<string, string | boolean>
+): EventTopologyAdvice {
+  const successDefinition = state?.successDefinition?.toLowerCase() ?? "";
+  const assumptions = state?.assumptions.join(" ").toLowerCase() ?? "";
+
+  return new EventTopologyAdvisor().advise({
+    backgroundJobs:
+      readBooleanArg(args, "background-jobs") ??
+      /background|queue|worker|async/.test(assumptions),
+    notifications:
+      readBooleanArg(args, "notifications") ??
+      /notify|notification/.test(assumptions),
+    webhooks:
+      readBooleanArg(args, "webhooks") ??
+      /webhook/.test(assumptions),
+    auditLogging:
+      readBooleanArg(args, "audit-logging") ??
+      /audit/.test(assumptions),
+    analyticsSideEffects:
+      readBooleanArg(args, "analytics-side-effects") ??
+      Boolean(state?.artifacts.includes("analytics-outline.md")),
+    aiAsyncFlows:
+      readBooleanArg(args, "ai-async-flows") ??
+      /ai|generation|llm|prompt/.test(successDefinition),
+    multiModuleConsumers:
+      readBooleanArg(args, "multi-module-consumers") ??
+      /multiple modules|fan-out|multi-consumer/.test(assumptions),
+    externalIntegrations:
+      readBooleanArg(args, "external-integrations") ??
+      /integration|third-party|provider|external/.test(assumptions),
+    eventualConsistencyAcceptable:
+      readBooleanArg(args, "eventual-consistency-acceptable") ??
+      /eventual consistency|async okay|deferred/.test(assumptions)
+  });
+}
+
+function inferStackComplexity(
+  state: ProjectState | null,
+  args?: Record<string, string | boolean>
+): "high" | "medium" | "low" {
+  const explicit =
+    typeof args?.["stack-complexity"] === "string" ? args["stack-complexity"] : undefined;
+
+  if (explicit === "high" || explicit === "medium" || explicit === "low") {
+    return explicit;
+  }
+
+  if (state?.projectType === "saas" || state?.projectType === "wrapper-app") {
+    return "high";
+  }
+
+  if (state?.projectType === "internal-tool") {
+    return "medium";
+  }
+
+  return "low";
+}
+
+function buildModelEscalationAdvice(
+  command: "/vibe.scaffold" | "/vibe.detail" | "/vibe.blueprint",
+  state: ProjectState | null,
+  artifacts: string[]
+): ModelEscalationAdvice {
+  return new ModelEscalationAdvisor().advise({
+    command,
+    projectType: state?.projectType,
+    hasAiFeatures: state?.hasAiFeatures,
+    artifacts,
+    stackComplexity: inferStackComplexity(state)
+  });
+}
+
+function buildBootstrapPlan(state: ProjectState | null): BootstrapPlan {
+  const projectType = inferProjectType(state);
+  const hasAiFeatures = state?.hasAiFeatures ?? true;
+  const stackComplexity = state ? inferStackComplexity(state) : "high";
+
+  return new BootstrapPlanner().plan({
+    projectType,
+    hasAiFeatures,
+    hasDesignHeavyUx:
+      state?.projectType === "saas" ||
+      state?.projectType === "content-site" ||
+      state?.projectType === "wrapper-app" ||
+      !state?.projectType,
+    stackComplexity
+  });
+}
+
 export class RouterEngine {
   run(context: RoutingContext): RoutingResult {
     const initialState = context.state;
@@ -341,6 +624,7 @@ export class RouterEngine {
 
     const transition = validateTransition(context.command, initialState);
     if (!transition.valid) {
+      const nextRecommendedCommand = stageBefore ? STAGE_COMMAND_MAP[stageBefore] ?? null : "/vibe.init";
       return {
         ok: false,
         command: context.command,
@@ -353,8 +637,14 @@ export class RouterEngine {
         artifactsCreated: [],
         warnings: [],
         blockers: transition.blockers,
-        nextRecommendedCommand: stageBefore ? STAGE_COMMAND_MAP[stageBefore] ?? null : "/vibe.init",
-        message: "Routing blocked by state or transition constraints."
+        nextRecommendedCommand,
+        message: "Routing blocked by state or transition constraints.",
+        delegation: createDelegationHint(
+          resolveAgent(context.command),
+          nextRecommendedCommand,
+          null,
+          ["The request is blocked until the workflow returns to a valid stage."]
+        )
       };
     }
 
@@ -375,6 +665,12 @@ export class RouterEngine {
         blockers: [],
         nextRecommendedCommand: "/vibe.plan",
         message: "Project initialized successfully.",
+        delegation: createDelegationHint(
+          "orchestrator",
+          "/vibe.plan",
+          "planner",
+          ["Initialization is complete. Planning is the next specialist-owned step."]
+        ),
         intelligence: {
           stack: new StackSelector().evaluate({
             projectType: "saas",
@@ -387,10 +683,249 @@ export class RouterEngine {
       };
     }
 
+    if (context.command === "/vibe.start") {
+      const onboarding = buildOnboardingAssessment(initialState, context.args);
+      const nextRecommendedCommand = onboarding.canInitializeState
+        ? initialState
+          ? recommendNext(initialState.stage) ?? "/vibe.plan"
+          : "/vibe.plan"
+        : "/vibe.start";
+      const recommendedAgent = onboarding.canInitializeState
+        ? nextRecommendedCommand
+          ? resolveAgent(nextRecommendedCommand)
+          : "planner"
+        : "onboarding-guide";
+
+      return {
+        ok: true,
+        command: context.command,
+        stageBefore,
+        stageAfter: onboarding.canInitializeState ? stageBefore ?? "init" : stageBefore,
+        statusBefore,
+        statusAfter: onboarding.canInitializeState ? "active" : statusBefore,
+        resolvedAgent: resolveAgent(context.command),
+        resolvedSkill: resolveSkill(context.command),
+        artifactsCreated: [],
+        warnings: onboarding.needsMoreAnswers
+          ? ["The system still needs a few onboarding answers before it should lock project truth."]
+          : [],
+        blockers: [],
+        nextRecommendedCommand,
+        message: onboarding.canInitializeState
+          ? "Guided onboarding captured enough project intent to initialize or refresh the workflow."
+          : "Guided onboarding has started and is collecting the remaining project intent.",
+        delegation: createDelegationHint(
+          "orchestrator",
+          nextRecommendedCommand,
+          recommendedAgent,
+          onboarding.canInitializeState
+            ? [
+                "The orchestrator translated the idea into a normalized project seed.",
+                "planner should own the next structured workflow step."
+              ]
+            : [
+                "The orchestrator is still in onboarding mode.",
+                "onboarding-guide should continue the plain-language Q&A loop."
+              ]
+        ),
+        intelligence: {
+          onboarding
+        }
+      };
+    }
+
+    if (context.command === "/vibe.spec-quality") {
+      const specQuality = buildSpecQualityAssessment(
+        context.projectRoot,
+        initialState,
+        context.args
+      );
+      const nextRecommendedCommand = specQuality.shouldBlockProgress
+        ? initialState
+          ? "/vibe.plan"
+          : "/vibe.init"
+        : stageBefore
+        ? recommendNext(stageBefore) ?? "/vibe.plan"
+        : "/vibe.init";
+      const recommendedAgent = specQuality.shouldBlockProgress
+        ? initialState
+          ? "planner"
+          : "onboarding-guide"
+        : nextRecommendedCommand
+        ? resolveAgent(nextRecommendedCommand)
+        : null;
+
+      return {
+        ok: true,
+        command: context.command,
+        stageBefore,
+        stageAfter: stageBefore,
+        statusBefore,
+        statusAfter: statusBefore,
+        resolvedAgent: resolveAgent(context.command),
+        resolvedSkill: resolveSkill(context.command),
+        artifactsCreated: [],
+        warnings: specQuality.warnings,
+        blockers: specQuality.blockers,
+        nextRecommendedCommand,
+        message: "Spec quality assessment completed.",
+        delegation: createDelegationHint(
+          "orchestrator",
+          nextRecommendedCommand,
+          recommendedAgent,
+          specQuality.shouldBlockProgress
+            ? [
+                "The orchestrator ran a governance check before deeper execution.",
+                `${recommendedAgent} should take the next step to repair clarity gaps.`
+              ]
+            : [
+                "The orchestrator verified that project intent is strong enough to keep moving.",
+                recommendedAgent
+                  ? `${recommendedAgent} owns the next most logical workflow step.`
+                  : "No specialist handoff is required immediately."
+              ]
+        ),
+        intelligence: {
+          specQuality
+        }
+      };
+    }
+
+    if (context.command === "/vibe.events") {
+      const events = buildEventTopologyAdvice(initialState, context.args);
+      const nextRecommendedCommand = !initialState
+        ? "/vibe.init"
+        : initialState.stage === "research"
+        ? "/vibe.blueprint"
+        : initialState.stage === "blueprint"
+        ? "/vibe.detail"
+        : recommendNext(initialState.stage);
+      const recommendedAgent = events.relevance.requiresEventCatalog
+        ? "detailer"
+        : events.relevance.requiresEventArchitecture
+        ? "architect"
+        : nextRecommendedCommand
+        ? resolveAgent(nextRecommendedCommand)
+        : null;
+
+      return {
+        ok: true,
+        command: context.command,
+        stageBefore,
+        stageAfter: stageBefore,
+        statusBefore,
+        statusAfter: statusBefore,
+        resolvedAgent: resolveAgent(context.command),
+        resolvedSkill: resolveSkill(context.command),
+        artifactsCreated: events.relevance.recommendedArtifacts,
+        warnings: [events.relevance.summary],
+        blockers: [],
+        nextRecommendedCommand,
+        message: "Event architecture advice prepared successfully.",
+        delegation: createDelegationHint(
+          "orchestrator",
+          nextRecommendedCommand,
+          recommendedAgent,
+          recommendedAgent
+            ? [
+                "The orchestrator evaluated event topology needs for the current project.",
+                `${recommendedAgent} is the specialist best aligned to the next event-design decision.`
+              ]
+            : ["The orchestrator evaluated event topology needs for the current project."]
+        ),
+        intelligence: {
+          events
+        }
+      };
+    }
+
+    if (context.command === "/vibe.skills") {
+      const skills = buildSkillRecommendation(context.projectRoot, initialState, context.args);
+      const nextRecommendedCommand = stageBefore ? recommendNext(stageBefore) : "/vibe.init";
+      const recommendedAgent = skills.recommendedSpecialists[0]?.agent ?? null;
+
+      return {
+        ok: true,
+        command: context.command,
+        stageBefore,
+        stageAfter: stageBefore,
+        statusBefore,
+        statusAfter: statusBefore,
+        resolvedAgent: resolveAgent(context.command),
+        resolvedSkill: resolveSkill(context.command),
+        artifactsCreated: [],
+        warnings: [],
+        blockers: [],
+        nextRecommendedCommand,
+        message: "Skill recommendations prepared successfully.",
+        delegation: createDelegationHint(
+          "orchestrator",
+          nextRecommendedCommand,
+          recommendedAgent,
+          recommendedAgent
+            ? [
+                "The orchestrator coordinated the recommendation pass.",
+                `${recommendedAgent} is the specialist agent best aligned to the selected capability path.`
+              ]
+            : ["The orchestrator coordinated the recommendation pass."]
+        ),
+        intelligence: {
+          skills
+        }
+      };
+    }
+
     const state = initialState!;
-    const artifactsCreated = simulateArtifacts(context.command);
+    let artifactsCreated =
+      context.command === "/vibe.scaffold"
+        ? buildBootstrapPlan(initialState).filesToGenerate
+        : simulateArtifacts(context.command);
+    const warnings: string[] = [];
+    let eventAdvice: EventTopologyAdvice | undefined;
+    let modelEscalationAdvice: ModelEscalationAdvice | undefined;
+
+    if (context.command === "/vibe.blueprint" || context.command === "/vibe.detail") {
+      eventAdvice = buildEventTopologyAdvice(initialState, context.args);
+
+      if (context.command === "/vibe.blueprint") {
+        if (eventAdvice.relevance.requiresEventArchitecture) {
+          artifactsCreated = Array.from(
+            new Set([...artifactsCreated, "Event-Architecture.md"])
+          );
+          warnings.push(eventAdvice.relevance.summary);
+        } else {
+          warnings.push(
+            "Event architecture is not justified yet. Keep event handling simple until more async pressure appears."
+          );
+        }
+      }
+
+      if (context.command === "/vibe.detail" && eventAdvice.relevance.requiresEventCatalog) {
+        artifactsCreated = Array.from(
+          new Set([...artifactsCreated, "Event-Catalog.md", "Event-Contracts.md"])
+        );
+        warnings.push(eventAdvice.relevance.summary);
+      }
+    }
+
+    if (
+      context.command === "/vibe.blueprint" ||
+      context.command === "/vibe.detail" ||
+      context.command === "/vibe.scaffold"
+    ) {
+      modelEscalationAdvice = buildModelEscalationAdvice(
+        context.command,
+        initialState,
+        artifactsCreated
+      );
+
+      if (context.command === "/vibe.scaffold" && modelEscalationAdvice.shouldRecommend) {
+        warnings.push(modelEscalationAdvice.summary);
+      }
+    }
 
     if (context.command === "/vibe.status") {
+      const nextRecommendedCommand = recommendNext(state.stage);
       return {
         ok: true,
         command: context.command,
@@ -403,12 +938,21 @@ export class RouterEngine {
         artifactsCreated: [],
         warnings: [],
         blockers: [],
-        nextRecommendedCommand: recommendNext(state.stage),
-        message: "Status inspected successfully."
+        nextRecommendedCommand,
+        message: "Status inspected successfully.",
+        delegation: createDelegationHint(
+          "orchestrator",
+          nextRecommendedCommand,
+          nextRecommendedCommand ? resolveAgent(nextRecommendedCommand) : null,
+          nextRecommendedCommand
+            ? [`${resolveAgent(nextRecommendedCommand)} owns the next specialist step.`]
+            : ["No further stage progression is available from the current state."]
+        )
       };
     }
 
     if (context.command === "/vibe.resume") {
+      const nextRecommendedCommand = recommendNext(state.stage);
       return {
         ok: true,
         command: context.command,
@@ -421,8 +965,16 @@ export class RouterEngine {
         artifactsCreated: [],
         warnings: [],
         blockers: [],
-        nextRecommendedCommand: recommendNext(state.stage),
-        message: "Project context resumed successfully."
+        nextRecommendedCommand,
+        message: "Project context resumed successfully.",
+        delegation: createDelegationHint(
+          "orchestrator",
+          nextRecommendedCommand,
+          nextRecommendedCommand ? resolveAgent(nextRecommendedCommand) : null,
+          nextRecommendedCommand
+            ? [`${resolveAgent(nextRecommendedCommand)} is the next specialist likely to take ownership.`]
+            : ["The project has no further automatic stage progression available."]
+        )
       };
     }
 
@@ -447,11 +999,20 @@ export class RouterEngine {
         nextRecommendedCommand: nextCommand,
         message: nextCommand
           ? `Next recommended command is ${nextCommand}.`
-          : "No further stage transition is available."
+          : "No further stage transition is available.",
+        delegation: createDelegationHint(
+          "orchestrator",
+          nextCommand,
+          nextCommand ? resolveAgent(nextCommand) : null,
+          nextCommand
+            ? [`${resolveAgent(nextCommand)} owns the next workflow step.`]
+            : ["No further stage progression is available from the current state."]
+        )
       };
     }
 
     if (context.command === "/vibe.decide" || context.command === "/vibe.assumptions") {
+      const nextRecommendedCommand = recommendNext(state.stage);
       return {
         ok: true,
         command: context.command,
@@ -464,8 +1025,14 @@ export class RouterEngine {
         artifactsCreated,
         warnings: [],
         blockers: [],
-        nextRecommendedCommand: recommendNext(state.stage),
-        message: "Cross-stage governance action completed."
+        nextRecommendedCommand,
+        message: "Cross-stage governance action completed.",
+        delegation: createDelegationHint(
+          "orchestrator",
+          nextRecommendedCommand,
+          nextRecommendedCommand ? resolveAgent(nextRecommendedCommand) : null,
+          ["The orchestrator handled a governance action without changing specialist ownership."]
+        )
       };
     }
 
@@ -476,6 +1043,14 @@ export class RouterEngine {
         : context.command === "/vibe.handoff-to-spec"
         ? "completed"
         : "active";
+    const nextRecommendedCommand =
+      context.command === "/vibe.handoff-to-spec"
+        ? null
+        : context.command === "/vibe.qa"
+        ? "/vibe.handoff-to-spec"
+        : targetStage
+        ? recommendNext(targetStage)
+        : null;
 
     return {
       ok: true,
@@ -487,17 +1062,18 @@ export class RouterEngine {
       resolvedAgent: resolveAgent(context.command),
       resolvedSkill: resolveSkill(context.command),
       artifactsCreated,
-      warnings: [],
+      warnings,
       blockers: [],
-      nextRecommendedCommand:
-        context.command === "/vibe.handoff-to-spec"
-          ? null
-          : context.command === "/vibe.qa"
-          ? "/vibe.handoff-to-spec"
-          : targetStage
-          ? recommendNext(targetStage)
-          : null,
+      nextRecommendedCommand,
       message: "Routing completed successfully.",
+      delegation: createDelegationHint(
+        resolveAgent(context.command),
+        nextRecommendedCommand,
+        nextRecommendedCommand ? resolveAgent(nextRecommendedCommand) : null,
+        nextRecommendedCommand
+          ? [`${resolveAgent(nextRecommendedCommand)} owns the next stage after ${context.command}.`]
+          : ["No further stage progression is available after this command."]
+      ),
       intelligence: context.command === "/vibe.plan" ? {
         provider: new ProviderSelector().evaluate({
           reasoningQualityRequired: "high",
@@ -507,12 +1083,13 @@ export class RouterEngine {
           structuredOutputRequired: true
         })
       } : context.command === "/vibe.scaffold" ? {
-        bootstrap: new BootstrapPlanner().plan({
-          projectType: "saas",
-          hasAiFeatures: true,
-          hasDesignHeavyUx: true,
-          stackComplexity: "high"
-        })
+        bootstrap: buildBootstrapPlan(initialState),
+        ...(modelEscalationAdvice ? { modelEscalation: modelEscalationAdvice } : {})
+      } : eventAdvice ? {
+        events: eventAdvice,
+        ...(modelEscalationAdvice ? { modelEscalation: modelEscalationAdvice } : {})
+      } : modelEscalationAdvice ? {
+        modelEscalation: modelEscalationAdvice
       } : undefined
     };
   }

@@ -1,0 +1,10 @@
+{
+  "id": "auth-safe-app",
+  "title": "Auth Safe App",
+  "summary": "Bundle for apps that rely on user accounts, sessions, and security-sensitive flows and need safer auth and test coverage decisions.",
+  "primaryAgent": "detailer",
+  "projectTypes": ["saas", "internal-tool", "wrapper-app"],
+  "recommendedStages": ["blueprint", "detail", "scaffold", "qa"],
+  "categories": ["auth", "security", "testing"],
+  "capabilities": ["better-auth-best-practices", "webapp-testing", "systematic-debugging"]
+}
