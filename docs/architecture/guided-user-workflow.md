@@ -39,6 +39,8 @@ The internal system should still preserve:
 - guarded transitions
 - specialist delegation
 
+For the autopilot operating contract that sits above the stage router, see `autopilot-mode.md`.
+
 ## User Persona
 
 This workflow is designed for a user who:

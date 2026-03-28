@@ -16,6 +16,12 @@
 ![Gemini CLI](https://img.shields.io/badge/target-Gemini%20CLI-1d4ed8?style=flat-square)
 
 Vibe Driven Dev is an agent-first framework for safe vibe coding.
+The official repository is the source of truth for what VDD is, how it should be installed, and how the workflow should run:
+
+- [GitHub repository](https://github.com/OpenOps-Studio/vibe-driven-dev)
+- [INSTALL.md](./INSTALL.md)
+- [USAGE.md](./USAGE.md)
+- [AGENTS.md](./AGENTS.md)
 
 ## Install
 
@@ -114,6 +120,17 @@ Then it hands the project into downstream execution.
 
 ## The journey
 
+Start with `/vibe.start`.
+
+That is the beginner-friendly entrypoint for both humans and coding agents. A good agent should not stop at installation or dump raw commands. It should:
+
+- install VDD using the cleanest native project-level method for the current runtime
+- treat this repository as the source of truth before executing the workflow
+- start guided onboarding in plain language
+- translate the user's answers into VDD state
+- continue into the next valid workflow step automatically unless a high-impact decision needs approval
+- explain the current stage, the current mission, and the next best step
+
 The default workflow looks like this:
 
 | Command | What it does |
@@ -139,7 +156,8 @@ Supporting commands include:
 
 Before execution, VDD can help generate a cleaner project foundation such as:
 
-- `PRD.md`
+- `PRD.draft.md`
+- `PRD.full.md`
 - `Logic.md`
 - `Structure.md`
 - `Dependencies.md`
@@ -184,7 +202,7 @@ The goal is to keep one canonical VDD system and export it in the cleanest nativ
 ```bash
 npx vibe-driven-dev install claude-code --project
 npx vibe-driven-dev doctor
-npx vibe-driven-dev run /vibe.init
+npx vibe-driven-dev run /vibe.start
 ```
 
 For full setup details, see [INSTALL.md](./INSTALL.md). For workflow usage, see [USAGE.md](./USAGE.md).
@@ -195,10 +213,13 @@ You can paste a setup prompt into your preferred coding agent and ask it to:
 
 - detect the current runtime
 - install or scaffold VDD in the cleanest project-local way
-- initialize the workflow
-- start the first useful commands automatically
+- treat this repository as the source of truth before installation and workflow execution
+- start with `/vibe.start`
+- begin guided onboarding in plain language
+- continue into the next useful workflow steps automatically
+- propose the next best step after each checkpoint
 
-See the install guides for runtime-specific setup flows.
+See [INSTALL.md](./INSTALL.md) for runtime-specific prompts and [AGENTS.md](./AGENTS.md) for the repo-native behavior contract.
 
 ## Repository structure
 

@@ -32,6 +32,7 @@ export interface OnboardingAssessment {
   plainLanguageNextStep: string;
   canInitializeState: boolean;
   canAutoRunEarlyJourney: boolean;
+  canAutoRunBlueprint: boolean;
   recommendedCommands: string[];
   seed: OnboardingSeed;
 }
@@ -236,6 +237,21 @@ function buildMissingSignals(seed: OnboardingSeed, promptPresent: boolean): stri
   return missing;
 }
 
+function shouldAutoRunBlueprint(seed: OnboardingSeed): boolean {
+  const strongProblem = seed.problemStatement.trim().length >= 60;
+  const strongSuccess = (seed.successDefinition?.trim().length ?? 0) >= 40;
+  const targetUserReady = (seed.targetUser?.trim().length ?? 0) >= 8;
+  const hasConstraints = seed.constraints.length > 0;
+  const foundationBias = seed.deliveryPreference === "foundation";
+  const complexProject =
+    seed.projectType === "saas" ||
+    seed.projectType === "wrapper-app" ||
+    seed.projectType === "internal-tool" ||
+    seed.hasAiFeatures;
+
+  return strongProblem && strongSuccess && targetUserReady && (complexProject || foundationBias || hasConstraints);
+}
+
 export class OnboardingEngine {
   assess(input: OnboardingAssessmentInput): OnboardingAssessment {
     const idea =
@@ -299,7 +315,9 @@ export class OnboardingEngine {
     const canInitializeState = !needsMoreAnswers;
     const questions = canInitializeState ? [] : buildQuestions(seed, promptPresent);
     const recommendedCommands = canInitializeState
-      ? ["/vibe.init", "/vibe.plan", "/vibe.research"]
+      ? shouldAutoRunBlueprint(seed)
+        ? ["/vibe.init", "/vibe.plan", "/vibe.research", "/vibe.blueprint"]
+        : ["/vibe.init", "/vibe.plan", "/vibe.research"]
       : ["/vibe.start"];
     const summary = canInitializeState
       ? `I understand the project as a ${projectType} for ${targetUser ?? "a defined audience"} that solves: ${problemStatement}`
@@ -319,6 +337,7 @@ export class OnboardingEngine {
       plainLanguageNextStep,
       canInitializeState,
       canAutoRunEarlyJourney: canInitializeState && mode === "autopilot",
+      canAutoRunBlueprint: canInitializeState && mode === "autopilot" && shouldAutoRunBlueprint(seed),
       recommendedCommands,
       seed
     };

@@ -12,6 +12,9 @@ export interface ModelEscalationAdvice {
   summary: string;
   recommendations: ModelRecommendation[];
   fallback: string;
+  prdArtifact: "PRD.full.md" | "PRD.draft.md";
+  decision: "accepted" | "deferred" | "not-needed";
+  handoffPrompt: string;
 }
 
 export interface ModelEscalationInput {
@@ -20,6 +23,7 @@ export interface ModelEscalationInput {
   hasAiFeatures?: boolean | undefined;
   artifacts?: string[] | undefined;
   stackComplexity?: "high" | "medium" | "low" | undefined;
+  accepted?: boolean | undefined;
 }
 
 export class ModelEscalationAdvisor {
@@ -27,6 +31,8 @@ export class ModelEscalationAdvisor {
     const artifacts = input.artifacts ?? [];
     const prdHeavy =
       input.command === "/vibe.scaffold" ||
+      artifacts.includes("PRD.full.md") ||
+      artifacts.includes("PRD.draft.md") ||
       artifacts.includes("PRD.md") ||
       artifacts.includes("Logic.md") ||
       artifacts.includes("Structure.md");
@@ -44,7 +50,10 @@ export class ModelEscalationAdvisor {
         stage: "none",
         summary: "The current workflow step does not justify a temporary model upgrade yet.",
         recommendations: [],
-        fallback: "Continue with the current model and revisit escalation when the workflow reaches PRD or deep architecture work."
+        fallback: "Continue with the current model and revisit escalation when the workflow reaches PRD or deep architecture work.",
+        prdArtifact: "PRD.full.md",
+        decision: "not-needed",
+        handoffPrompt: "No model handoff is needed for this step."
       };
     }
 
@@ -53,6 +62,8 @@ export class ModelEscalationAdvisor {
       stage === "prd-heavy"
         ? "This step creates PRD-heavy and long-form project truth. A stronger model is worth recommending for this stage."
         : "This step is architecture-heavy enough that a stronger planning model may improve quality.";
+
+    const accepted = input.accepted === true;
 
     return {
       shouldRecommend: true,
@@ -76,7 +87,12 @@ export class ModelEscalationAdvisor {
         }
       ],
       fallback:
-        "If the user stays on the current model, continue normally and mark the PRD as a draft rather than pretending it has the same depth."
+        "If the user stays on the current model, continue normally and mark the PRD as a draft rather than pretending it has the same depth.",
+      prdArtifact: accepted ? "PRD.full.md" : "PRD.draft.md",
+      decision: accepted ? "accepted" : "deferred",
+      handoffPrompt: accepted
+        ? "Stronger-model path accepted. Re-run scaffold on the upgraded model to keep generating or refining PRD.full.md."
+        : "Switch now to the latest active Anthropic flagship available to you, or GPT-5.4/Codex with xhigh reasoning, then re-run /vibe.scaffold --accept-model-upgrade to generate PRD.full.md."
     };
   }
 }

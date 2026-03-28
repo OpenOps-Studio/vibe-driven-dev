@@ -11,9 +11,12 @@ export interface BootstrapPlanningInput {
   hasAiFeatures: boolean;
   hasDesignHeavyUx: boolean;
   stackComplexity: "high" | "medium" | "low";
+  prdArtifact?: "PRD.full.md" | "PRD.draft.md" | undefined;
 }
 
 export type BootstrapFileType =
+  | "PRD.full.md"
+  | "PRD.draft.md"
   | "PRD.md"
   | "Logic.md"
   | "Structure.md"
@@ -31,7 +34,10 @@ export interface BootstrapPlan {
 export class BootstrapPlanner {
   plan(input: BootstrapPlanningInput): BootstrapPlan {
     // Every project requires the foundational three
-    const files: Set<BootstrapFileType> = new Set(["PRD.md", "Structure.md"]);
+    const files: Set<BootstrapFileType> = new Set([
+      input.prdArtifact ?? "PRD.draft.md",
+      "Structure.md"
+    ]);
 
     // If it has business logic (not just a pure content site), it needs Logic.md
     if (input.projectType !== "content-site") {

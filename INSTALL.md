@@ -64,17 +64,24 @@ npx vibe-driven-dev targets
 
 # Step 3: Start the guided VDD workflow
 npx vibe-driven-dev run /vibe.start --idea "Describe the project in plain language"
+
+# Step 4: Or let onboarding auto-run planning and research
+npx vibe-driven-dev run /vibe.start --autopilot --idea "Describe the project in plain language"
 ```
 
 ---
 
 ## 4. Quickly Use With Your Favorite Coding Agent
 
-Do not want to install everything manually
+Paste one of the prompts below directly into your coding agent.
 
-Copy one of the prompts below and paste it directly into your coding agent
-
-The agent should detect its environment install VDD in the cleanest project-level way possible and start the workflow for you
+Each prompt tells the agent:
+- what Vibe Driven Dev is
+- where the official repository lives
+- which local docs to read first
+- how to install VDD
+- how to start guided onboarding after installation
+- how to continue into the workflow instead of stopping at raw commands
 
 ### Runtime Fit
 
@@ -89,52 +96,83 @@ The agent should detect its environment install VDD in the cleanest project-leve
 ```text
 You are my coding agent and setup operator.
 
-Your job is to install and activate Vibe Driven Dev in this project with the most native integration possible for the current runtime.
+You are going to install and activate Vibe Driven Dev for this project, then guide me through the first project-definition workflow in plain language.
 
-Important goals:
-1. Detect which coding agent/runtime you are currently running inside.
-2. If the runtime supports native agents, skills, rules, commands, extensions, or project-level configuration, use the most appropriate project-local installation method.
-3. Prefer project-level installation over global installation unless project-level is impossible.
-4. Do not ask me technical questions unless absolutely necessary. I am a non-technical user.
-5. Explain what you are doing in simple language before each major step.
-6. Keep the installation clean. Do not add unnecessary files.
-7. Do not overwrite existing important project files without checking first.
-8. If Vibe Driven Dev is not installed yet, install or scaffold it in the correct way for this runtime.
-9. Then start guided onboarding and move the project into the VDD journey.
-10. After installation, begin a plain-language Q&A loop instead of expecting me to know commands.
+Important context:
+Vibe Driven Dev is an agent-first pre-execution framework for AI coding agents.
+Its job is to turn vague product ideas into:
+- structured planning
+- bootstrap files
+- stack decisions
+- AI provider and model decisions for the product itself
+- handoff-ready workflows
 
-Your exact workflow:
-- Detect the runtime and installation surface.
-- Inspect the repository safely.
-- Install VDD in the best supported way for this runtime.
-- Create or update only the minimum required project-local files.
-- Set up the agent integration layer if supported.
-- Run environment checks.
-- Read the repo-local guidance first:
-  - README.md
-  - INSTALL.md
-  - USAGE.md
-  - docs/architecture/guided-user-workflow.md
-- Start the workflow with /vibe.start.
-- Ask at most 5 to 7 simple onboarding questions in plain language.
-- Translate the answers into VDD state.
-- Continue into the first valid workflow steps once the intent is grounded.
-- Before PRD-heavy scaffold work, recommend a stronger model temporarily if that would materially improve the artifact quality.
-- Summarize what was installed, where it was installed, and what I should do next.
+Official repository:
+https://github.com/OpenOps-Studio/vibe-driven-dev
 
-Important constraints:
-- Prefer the native runtime conventions of the current agent.
-- If native integration is not possible, fall back to a clean generic project-local setup.
-- Keep archive or learning-only material out of the main runtime path unless needed explicitly.
-- Keep the setup understandable and tidy.
-- Use a calm, beginner-friendly explanation style.
+Treat the official VDD repository as the source of truth before installation and workflow execution.
 
-At the end, give me:
-1. What you detected
-2. What you installed
-3. Where the files were placed
-4. What workflow step I am currently in
-5. What I should type next if I want to continue manually
+Read these files first if they exist locally:
+- README.md
+- INSTALL.md
+- USAGE.md
+- AGENTS.md
+- docs/architecture/guided-user-workflow.md
+- docs/architecture/autopilot-mode.md
+- docs/architecture/model-escalation-policy.md
+
+Your responsibilities:
+1. Inspect the repository and understand VDD before doing anything else.
+2. Detect which coding-agent runtime you are currently running inside.
+3. Install VDD using the cleanest native project-level method supported by this runtime.
+4. Keep the setup minimal and tidy.
+5. Do not overwrite important files without warning me first.
+6. After installation, do not stop at raw commands.
+7. Immediately move me into a guided onboarding loop in simple non-technical language.
+
+Guided onboarding rules:
+- Assume I am a non-technical user.
+- Ask only the minimum useful questions.
+- Ask about the project idea in natural language.
+- Help me describe what I want to build, who it is for, what problem it solves, and whether AI is part of the product.
+- Do not overwhelm me with technical wording.
+- Keep the conversation practical and calm.
+
+Workflow rules:
+- Translate my answers into the VDD workflow.
+- Start by guiding or executing the equivalent of:
+  - /vibe.init
+  - /vibe.plan
+  - /vibe.scaffold
+- Always explain what stage or mission we are in.
+- Always tell me the next best step.
+- Continue automatically unless a high-impact decision needs my approval.
+
+Decision rules:
+- If stack selection is needed, explain the top recommendation simply.
+- If AI provider or model selection is needed for the product itself, explain the best fit simply.
+- If this project would benefit from extra coding-agent skills, recommend them clearly.
+
+PRD quality rule:
+- Once you have enough information to create a serious PRD, tell me explicitly.
+- At that point, recommend switching to a stronger model for the PRD-writing phase if appropriate.
+- For Anthropic users, prefer the latest active flagship model available, such as Claude Opus 4.6 where available.
+- For OpenAI/Codex users, prefer the strongest reasoning setting available for detailed PRD work.
+- Do not force the switch, but explain why it would improve output quality.
+
+Final behavior:
+- be installation-aware
+- be workflow-aware
+- be next-step-aware
+- be beginner-friendly
+- do not leave me with a pile of commands and no guidance
+
+At the end of each major step, tell me:
+1. what you just did
+2. what you learned
+3. what stage or mission we are in
+4. what the next best step is
+5. whether you need my approval or can continue automatically
 ```
 
 ### Claude Code Prompt
@@ -142,29 +180,58 @@ At the end, give me:
 ```text
 You are running inside Claude Code.
 
-Please install and activate Vibe Driven Dev for this project using Claude Code native project-level integration.
+Install and activate Vibe Driven Dev for this project using Claude Code native project-level integration.
+
+Official repository:
+https://github.com/OpenOps-Studio/vibe-driven-dev
+
+Treat the official VDD repository as the source of truth before installation and workflow execution.
+
+Read these files first if they exist locally:
+- README.md
+- INSTALL.md
+- USAGE.md
+- AGENTS.md
+- docs/architecture/guided-user-workflow.md
+- docs/architecture/autopilot-mode.md
+- docs/architecture/model-escalation-policy.md
 
 Use Claude-native conventions:
 - project subagents in .claude/agents/
 - project skills in .claude/skills/
 
 Your job:
-- inspect the current repository
-- install or scaffold Vibe Driven Dev cleanly for Claude Code
-- use project-level setup, not user-level, unless project-level is impossible
-- keep the installation minimal and tidy
+- inspect the VDD repository first
+- understand what VDD is and how it works
+- install it cleanly into this project using Claude-native project-level conventions
+- keep the installation minimal
 - do not overwrite important files without warning me first
-- start the guided workflow with /vibe.start
-- ask simple onboarding questions in plain language
-- continue into the first valid workflow steps once the project intent is clear
-- before PRD-heavy scaffold work, recommend a stronger model temporarily if that would clearly improve the result
+- after installation, do not stop at setup
+- immediately start a guided onboarding conversation with me in simple language
+- ask me what kind of project I want to build
+- help me explain it naturally
+- translate my answers into the VDD workflow
+- guide or execute:
+  - /vibe.init
+  - /vibe.plan
+  - /vibe.scaffold
+
+At every stage:
+- tell me what stage or mission we are in
+- tell me the next best step
+- continue automatically unless a high-impact decision needs my approval
+
+When enough information exists for a serious PRD:
+- say so clearly
+- recommend using the strongest available model for that phase, such as Claude Opus 4.6 where available
+- explain that this is to improve PRD quality, depth, and structure
 
 I am not technical, so explain each step in simple language.
 
 At the end:
 - summarize what you installed
 - list the Claude-specific paths you used
-- show me the current VDD stage
+- show me the current VDD stage or mission
 - tell me the next command if I want to continue manually
 ```
 
@@ -174,6 +241,20 @@ At the end:
 You are my coding agent.
 
 Please install and activate Vibe Driven Dev in this repository using the most native project-level integration available for this editor/runtime.
+
+Official repository:
+https://github.com/OpenOps-Studio/vibe-driven-dev
+
+Treat the official VDD repository as the source of truth before installation and workflow execution.
+
+Read these files first if they exist locally:
+- README.md
+- INSTALL.md
+- USAGE.md
+- AGENTS.md
+- docs/architecture/guided-user-workflow.md
+- docs/architecture/autopilot-mode.md
+- docs/architecture/model-escalation-policy.md
 
 Preferred behavior:
 - use AGENTS.md if this runtime supports it
@@ -186,7 +267,7 @@ Your tasks:
 1. Detect whether this runtime prefers AGENTS.md, project rules, custom agent files, or another native project-level setup.
 2. Install or scaffold Vibe Driven Dev accordingly.
 3. Keep the setup clean and understandable.
-4. Start the guided workflow with /vibe.start.
+4. Start the guided workflow with /vibe.start after installation.
 5. Ask simple onboarding questions in plain language and keep the question budget small.
 6. Continue into the first valid workflow steps only after the idea is grounded.
 7. Before PRD-heavy scaffold work, recommend a stronger model temporarily if that would clearly improve the result.
@@ -206,6 +287,20 @@ At the end, show:
 You are running inside Gemini CLI.
 
 Please set up Vibe Driven Dev for this project using the most native Gemini CLI approach available.
+
+Official repository:
+https://github.com/OpenOps-Studio/vibe-driven-dev
+
+Treat the official VDD repository as the source of truth before installation and workflow execution.
+
+Read these files first if they exist locally:
+- README.md
+- INSTALL.md
+- USAGE.md
+- AGENTS.md
+- docs/architecture/guided-user-workflow.md
+- docs/architecture/autopilot-mode.md
+- docs/architecture/model-escalation-policy.md
 
 Preferred Gemini-style behavior:
 - use project-local commands if useful
@@ -237,14 +332,28 @@ At the end:
 
 A good setup flow should:
 - detect the current runtime
+- understand VDD from the repository first
 - prefer project-level installation
 - keep the setup tidy
 - avoid unnecessary files
 - start guided onboarding
 - translate plain-language answers into the first workflow steps
+- keep explaining the current stage or mission
+- keep proposing or executing the next best step
 - explain clearly what was installed and where
 
 If the runtime does not support native agents or skills well, the agent should fall back to a clean generic project-local setup instead of forcing a bad integration
+
+### What the Agent Must Do After Install
+
+After installation, the agent should:
+1. tell the user what was detected
+2. tell the user what was installed and where
+3. start `/vibe.start` or the equivalent guided entrypoint
+4. ask the minimum useful onboarding questions
+5. translate answers into VDD workflow steps
+6. continue automatically unless a high-impact decision needs approval
+7. explain the next best step after each major checkpoint
 
 ### What the User Should Expect
 
@@ -252,7 +361,7 @@ After a good setup run, the agent should tell you:
 - which runtime it detected
 - which installation method it used
 - which files it created or updated
-- which VDD stage the project is currently in
+- which VDD stage or mission the project is currently in
 - which command to type next if you want to continue manually
 
 ---

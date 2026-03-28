@@ -21,6 +21,10 @@ import {
   ModelEscalationAdvisor,
   type ModelEscalationAdvice
 } from "../intelligence/model-escalation-advisor.js";
+import {
+  AutopilotConductor,
+  type StageCheckpointSummary
+} from "../autopilot/conductor.js";
 import { resolveInstallTarget } from "../install/registry.js";
 
 export type VddPublicCommand =
@@ -107,6 +111,8 @@ export interface RoutingResult {
   warnings: string[];
   blockers: string[];
   nextRecommendedCommand: VddPublicCommand | null;
+  humanNextStep?: string[] | undefined;
+  checkpoint?: StageCheckpointSummary | undefined;
   message: string;
   delegation?: {
     currentOwner: string | null;
@@ -585,24 +591,85 @@ function inferStackComplexity(
   return "low";
 }
 
+function buildStackRecommendation(
+  state: ProjectState | null
+): StackRecommendation {
+  const projectType = inferProjectType(state);
+  return new StackSelector().evaluate({
+    projectType,
+    speedPriority: state?.deliveryPreference === "mvp" ? "high" : "medium",
+    complexityTolerance:
+      projectType === "saas" || projectType === "wrapper-app"
+        ? "high"
+        : projectType === "internal-tool"
+        ? "medium"
+        : "low",
+    needsAuth:
+      projectType === "saas" ||
+      projectType === "internal-tool" ||
+      projectType === "wrapper-app",
+    needsDb: projectType !== "content-site"
+  });
+}
+
+function buildProviderRecommendation(
+  command: "/vibe.plan" | "/vibe.blueprint" | "/vibe.detail" | "/vibe.scaffold",
+  state: ProjectState | null
+): ProviderRecommendation | undefined {
+  if (state?.hasAiFeatures !== true) {
+    return undefined;
+  }
+
+  return new ProviderSelector().evaluate({
+    reasoningQualityRequired:
+      command === "/vibe.scaffold"
+        ? "extreme"
+        : command === "/vibe.detail"
+        ? "high"
+        : "moderate",
+    writingQualityRequired: command === "/vibe.scaffold" ? "high" : "moderate",
+    costSensitivity: state.deliveryPreference === "mvp" ? "medium" : "low",
+    latencyTolerance: command === "/vibe.scaffold" ? "high" : "medium",
+    structuredOutputRequired: true
+  });
+}
+
 function buildModelEscalationAdvice(
   command: "/vibe.scaffold" | "/vibe.detail" | "/vibe.blueprint",
   state: ProjectState | null,
-  artifacts: string[]
+  artifacts: string[],
+  args?: Record<string, string | boolean>
 ): ModelEscalationAdvice {
+  const accepted =
+    readBooleanArg(args, "accept-model-upgrade") ??
+    readBooleanArg(args, "accept-escalation") ??
+    readBooleanArg(args, "full-prd");
   return new ModelEscalationAdvisor().advise({
     command,
     projectType: state?.projectType,
     hasAiFeatures: state?.hasAiFeatures,
     artifacts,
-    stackComplexity: inferStackComplexity(state)
+    stackComplexity: inferStackComplexity(state),
+    accepted
   });
 }
 
-function buildBootstrapPlan(state: ProjectState | null): BootstrapPlan {
+function buildBootstrapPlan(
+  state: ProjectState | null,
+  args?: Record<string, string | boolean>,
+  modelEscalationAdvice?: ModelEscalationAdvice
+): BootstrapPlan {
   const projectType = inferProjectType(state);
   const hasAiFeatures = state?.hasAiFeatures ?? true;
   const stackComplexity = state ? inferStackComplexity(state) : "high";
+  const explicitPrdDepth =
+    typeof args?.["prd-depth"] === "string" ? args["prd-depth"].trim().toLowerCase() : undefined;
+  const prdArtifact =
+    explicitPrdDepth === "full"
+      ? "PRD.full.md"
+      : explicitPrdDepth === "draft"
+      ? "PRD.draft.md"
+      : modelEscalationAdvice?.prdArtifact ?? "PRD.full.md";
 
   return new BootstrapPlanner().plan({
     projectType,
@@ -612,8 +679,30 @@ function buildBootstrapPlan(state: ProjectState | null): BootstrapPlan {
       state?.projectType === "content-site" ||
       state?.projectType === "wrapper-app" ||
       !state?.projectType,
-    stackComplexity
+    stackComplexity,
+    prdArtifact
   });
+}
+
+function buildHumanNextStep(
+  command: VddPublicCommand,
+  nextRecommendedCommand: VddPublicCommand | null,
+  modelEscalationAdvice?: ModelEscalationAdvice
+): string[] | undefined {
+  if (
+    command === "/vibe.scaffold" &&
+    modelEscalationAdvice?.shouldRecommend &&
+    modelEscalationAdvice.decision === "deferred"
+  ) {
+    return [
+      "Switch model to the latest active Anthropic flagship available to you, or GPT-5.4/Codex with xhigh reasoning.",
+      "Re-run /vibe.scaffold --accept-model-upgrade to generate PRD.full.md.",
+      "Otherwise continue to /vibe.qa with draft PRD truth only."
+    ];
+  }
+
+  void nextRecommendedCommand;
+  return undefined;
 }
 
 export class RouterEngine {
@@ -878,13 +967,18 @@ export class RouterEngine {
     const state = initialState!;
     let artifactsCreated =
       context.command === "/vibe.scaffold"
-        ? buildBootstrapPlan(initialState).filesToGenerate
+        ? buildBootstrapPlan(initialState, context.args).filesToGenerate
         : simulateArtifacts(context.command);
     const warnings: string[] = [];
+    let stackAdvice: StackRecommendation | undefined;
+    let providerAdvice: ProviderRecommendation | undefined;
     let eventAdvice: EventTopologyAdvice | undefined;
     let modelEscalationAdvice: ModelEscalationAdvice | undefined;
+    let checkpoint: StageCheckpointSummary | undefined;
 
     if (context.command === "/vibe.blueprint" || context.command === "/vibe.detail") {
+      stackAdvice = buildStackRecommendation(initialState);
+      providerAdvice = buildProviderRecommendation(context.command, initialState);
       eventAdvice = buildEventTopologyAdvice(initialState, context.args);
 
       if (context.command === "/vibe.blueprint") {
@@ -913,15 +1007,47 @@ export class RouterEngine {
       context.command === "/vibe.detail" ||
       context.command === "/vibe.scaffold"
     ) {
+      if (!stackAdvice) {
+        stackAdvice = buildStackRecommendation(initialState);
+      }
+
+      if (!providerAdvice) {
+        providerAdvice = buildProviderRecommendation(context.command, initialState);
+      }
+
       modelEscalationAdvice = buildModelEscalationAdvice(
         context.command,
         initialState,
-        artifactsCreated
+        artifactsCreated,
+        context.args
       );
 
       if (context.command === "/vibe.scaffold" && modelEscalationAdvice.shouldRecommend) {
+        artifactsCreated = buildBootstrapPlan(
+          initialState,
+          context.args,
+          modelEscalationAdvice
+        ).filesToGenerate;
         warnings.push(modelEscalationAdvice.summary);
+        warnings.push(
+          modelEscalationAdvice.decision === "accepted"
+            ? "Model escalation was accepted. Scaffold will generate the deeper PRD artifact."
+            : "Model escalation was not accepted yet. Scaffold will generate PRD.draft.md and keep the stronger-model path optional."
+        );
+        warnings.push(modelEscalationAdvice.handoffPrompt);
       }
+
+      checkpoint = new AutopilotConductor().summarizeStage({
+        command: context.command,
+        artifactsCreated,
+        ...(stackAdvice ? { stack: stackAdvice } : {}),
+        ...(providerAdvice ? { provider: providerAdvice } : {}),
+        ...(eventAdvice ? { events: eventAdvice } : {}),
+        ...(modelEscalationAdvice ? { modelEscalation: modelEscalationAdvice } : {}),
+        nextRecommendedCommand: commandToExpectedStage(context.command)
+          ? recommendNext(commandToExpectedStage(context.command)!)
+          : null
+      });
     }
 
     if (context.command === "/vibe.status") {
@@ -1051,6 +1177,11 @@ export class RouterEngine {
         : targetStage
         ? recommendNext(targetStage)
         : null;
+    const humanNextStep = buildHumanNextStep(
+      context.command,
+      nextRecommendedCommand,
+      modelEscalationAdvice
+    );
 
     return {
       ok: true,
@@ -1065,6 +1196,8 @@ export class RouterEngine {
       warnings,
       blockers: [],
       nextRecommendedCommand,
+      humanNextStep,
+      checkpoint,
       message: "Routing completed successfully.",
       delegation: createDelegationHint(
         resolveAgent(context.command),
@@ -1083,13 +1216,22 @@ export class RouterEngine {
           structuredOutputRequired: true
         })
       } : context.command === "/vibe.scaffold" ? {
-        bootstrap: buildBootstrapPlan(initialState),
+        bootstrap: buildBootstrapPlan(initialState, context.args, modelEscalationAdvice),
+        ...(stackAdvice ? { stack: stackAdvice } : {}),
+        ...(providerAdvice ? { provider: providerAdvice } : {}),
         ...(modelEscalationAdvice ? { modelEscalation: modelEscalationAdvice } : {})
       } : eventAdvice ? {
+        ...(stackAdvice ? { stack: stackAdvice } : {}),
+        ...(providerAdvice ? { provider: providerAdvice } : {}),
         events: eventAdvice,
         ...(modelEscalationAdvice ? { modelEscalation: modelEscalationAdvice } : {})
       } : modelEscalationAdvice ? {
+        ...(stackAdvice ? { stack: stackAdvice } : {}),
+        ...(providerAdvice ? { provider: providerAdvice } : {}),
         modelEscalation: modelEscalationAdvice
+      } : stackAdvice || providerAdvice ? {
+        ...(stackAdvice ? { stack: stackAdvice } : {}),
+        ...(providerAdvice ? { provider: providerAdvice } : {})
       } : undefined
     };
   }

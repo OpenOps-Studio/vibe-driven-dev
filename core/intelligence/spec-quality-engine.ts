@@ -92,6 +92,8 @@ export class SpecQualityEngine {
     const args = input.args ?? {};
 
     const rootArtifacts = [
+      "PRD.full.md",
+      "PRD.draft.md",
       "PRD.md",
       "Logic.md",
       "Structure.md",
@@ -158,6 +160,8 @@ export class SpecQualityEngine {
 
     if (
       allArtifacts.includes("problem-statement.md") ||
+      allArtifacts.includes("PRD.full.md") ||
+      allArtifacts.includes("PRD.draft.md") ||
       allArtifacts.includes("PRD.md") ||
       /problem|pain point|workflow/i.test(readme)
     ) {

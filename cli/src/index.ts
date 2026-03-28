@@ -11,6 +11,7 @@ import { StateManager } from "../../core/router/state-manager.js";
 import { SourceLoader } from "../../core/runtime/source-loader.js";
 import { addPack, listPacks } from "../../core/runtime/pack-loader.js";
 import { SecurityGate } from "../../core/gates/security-gate.js";
+import { AutopilotConductor } from "../../core/autopilot/conductor.js";
 import { runInstallCommand } from "./commands/install.js";
 import { runTargetsCommand } from "./commands/targets.js";
 import { resolveVddPaths } from "../../core/install/paths.js";
@@ -25,6 +26,7 @@ const router = new RouterEngine();
 const stateManager = new StateManager();
 const sourceLoader = new SourceLoader();
 const securityGate = new SecurityGate();
+const autopilotConductor = new AutopilotConductor();
 
 
 function printJson(data: unknown): void {
@@ -516,10 +518,54 @@ program
           }
         }
 
+        const autopilotResults: unknown[] = [];
+        const autopilotPlan =
+          onboarding && state
+            ? autopilotConductor.plan({
+                onboarding,
+                currentStage: state.stage
+              })
+            : null;
+
+        if (autopilotPlan?.continueAutomatically && state) {
+          for (const step of autopilotPlan.steps) {
+            const autoResult = router.run({
+              command: step.command,
+              state,
+              projectRoot: process.cwd()
+            });
+
+            autopilotResults.push({
+              command: step.command,
+              reason: step.reason,
+              result: autoResult
+            });
+
+            if (!autoResult.ok) {
+              break;
+            }
+
+            if (autoResult.stageAfter && autoResult.stageAfter !== state.stage) {
+              const nextStatus =
+                autoResult.statusAfter && autoResult.statusAfter !== state.status
+                  ? autoResult.statusAfter
+                  : undefined;
+
+              state = await stateManager.markStage(autoResult.stageAfter, nextStatus);
+            }
+
+            if (autoResult.artifactsCreated.length > 0) {
+              state = await stateManager.addArtifacts(autoResult.artifactsCreated);
+            }
+          }
+        }
+
         printSection("VDD run");
         printJson({
           parsed,
           result,
+          ...(autopilotPlan ? { autopilotPlan } : {}),
+          ...(autopilotResults.length > 0 ? { autopilot: autopilotResults } : {}),
           state: state ?? (await stateManager.load())
         });
         return;
@@ -581,6 +627,25 @@ program
 
       if (result.artifactsCreated.length > 0) {
         state = await stateManager.addArtifacts(result.artifactsCreated);
+
+        if (
+          parsed.normalized === "/vibe.scaffold" &&
+          result.artifactsCreated.some((artifact) => artifact === "PRD.full.md" || artifact === "PRD.draft.md")
+        ) {
+          const selectedPrdArtifact = result.artifactsCreated.includes("PRD.full.md")
+            ? "PRD.full.md"
+            : "PRD.draft.md";
+
+          state = await stateManager.update((current) => ({
+            ...current,
+            artifacts: current.artifacts.filter(
+              (artifact) =>
+                artifact !== "PRD.full.md" &&
+                artifact !== "PRD.draft.md" ||
+                artifact === selectedPrdArtifact
+            )
+          }));
+        }
       }
 
       if (parsed.normalized === "/vibe.qa") {
@@ -596,9 +661,14 @@ program
         console.log(chalk.cyan("Writing bootstrap artifacts..."));
         const targetDir = process.cwd();
         const templatesDir = path.resolve(__dirname, "../../../templates/bootstrap");
+        const templateOverrides: Record<string, string> = {
+          "PRD.full.md": "PRD.full.md",
+          "PRD.draft.md": "PRD.draft.md"
+        };
         
         for (const file of result.artifactsCreated) {
-          const srcPath = path.join(templatesDir, file);
+          const templateName = templateOverrides[file] ?? file;
+          const srcPath = path.join(templatesDir, templateName);
           const destPath = path.join(targetDir, file);
           if (await fs.pathExists(srcPath)) {
             await fs.copy(srcPath, destPath, { overwrite: false });
