@@ -21,7 +21,8 @@ inputs:
     - repo_conventions
     - design_tokens
 outputs:
-  - PRD.md
+  - PRD.draft.md
+  - PRD.full.md
   - Logic.md
   - Structure.md
   - Dependencies.md
@@ -79,7 +80,7 @@ Minimum requirements:
 ## Steps
 
 1. **Verify Integrity**: Confirm all required design artifacts (`architecture-baseline.md`, `technical-detail.md`, etc.) are present and trusted.
-2. **Draft PRD**: Extract the product goals, target users, and functional requirements into `PRD.md`.
+2. **Draft PRD**: Extract the product goals, target users, and functional requirements into `PRD.draft.md` by default.
 3. **Logic Extract**: Capture the core business logic and state transitions from the technical detail into `Logic.md`.
 4. **Structure Mapping**: Define the conceptual file and folder structure in `Structure.md`.
 5. **Dependency Listing**: List all selected technologies, versions, and rationale in `Dependencies.md`.
@@ -91,7 +92,8 @@ Minimum requirements:
 ## Output Contract
 
 Consistent with the **Intelligence Layer** specification:
-- `PRD.md`: Goals, non-goals, user profiles.
+- `PRD.draft.md`: Honest PRD when stronger-model escalation is recommended but not accepted yet.
+- `PRD.full.md`: Deeper PRD generated after stronger-model escalation is explicitly accepted.
 - `Logic.md`: Business rules, invariants, state flow.
 - `Structure.md`: Conceptual repo mapping.
 - `Dependencies.md`: Verifiable tech stack list.

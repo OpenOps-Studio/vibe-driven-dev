@@ -52,6 +52,42 @@ describe("RouterEngine — valid transitions", () => {
     expect(result.nextRecommendedCommand).toBe("/vibe.plan");
   });
 
+  it("/vibe.start autopilot reports that it can auto-run the early journey", () => {
+    const result = engine.run({
+      command: "/vibe.start",
+      state: null,
+      args: {
+        idea: "AI assistant for small sales teams that drafts outreach emails from inbound leads",
+        "target-user": "small B2B sales teams",
+        "success-definition": "A rep can review a lead and send a first draft in under three minutes",
+        delivery: "mvp",
+        autopilot: true
+      }
+    });
+    expect(result.ok).toBe(true);
+    expect(result.intelligence?.onboarding?.canAutoRunEarlyJourney).toBe(true);
+  });
+
+  it("/vibe.start autopilot reports blueprint readiness when the intent is strong enough", () => {
+    const result = engine.run({
+      command: "/vibe.start",
+      state: null,
+      args: {
+        idea:
+          "AI assistant for small sales teams that drafts outreach emails from inbound leads and coordinates qualification, routing, and follow-up workflows",
+        "target-user": "small B2B sales teams",
+        "success-definition":
+          "A rep can review a lead, approve a personalized first draft, and push the lead into the right follow-up workflow in under three minutes",
+        delivery: "foundation",
+        constraints: "keep human approval in the loop; web app first",
+        autopilot: true
+      }
+    });
+    expect(result.ok).toBe(true);
+    expect(result.intelligence?.onboarding?.canAutoRunBlueprint).toBe(true);
+    expect(result.intelligence?.onboarding?.recommendedCommands).toContain("/vibe.blueprint");
+  });
+
   it("/vibe.start stays in Q&A mode when the idea is still too vague", () => {
     const result = engine.run({
       command: "/vibe.start",
@@ -173,6 +209,28 @@ describe("RouterEngine — valid transitions", () => {
     expect(result.intelligence?.events?.relevance.requiresEventArchitecture).toBe(true);
   });
 
+  it("/vibe.blueprint returns an approval-aware checkpoint summary", () => {
+    const result = engine.run({
+      command: "/vibe.blueprint",
+      state: makeState({
+        stage: "research",
+        projectType: "saas",
+        hasAiFeatures: true,
+        assumptions: ["This flow has webhooks and user notifications"]
+      }),
+      args: {
+        notifications: true,
+        webhooks: true
+      }
+    });
+    expect(result.ok).toBe(true);
+    expect(result.checkpoint?.checkpoint).toBe("technical-strategy-locked");
+    expect(result.checkpoint?.approvals.map((approval) => approval.type)).toEqual(
+      expect.arrayContaining(["stack", "provider", "events", "model-escalation"])
+    );
+    expect(result.checkpoint?.approvals.find((approval) => approval.type === "events")?.requiresApproval).toBe(true);
+  });
+
   it("/vibe.detail runs from blueprint stage", () => {
     const result = engine.run(
       ctx("/vibe.detail", makeState({ stage: "blueprint" }))
@@ -215,6 +273,47 @@ describe("RouterEngine — valid transitions", () => {
     expect(result.ok).toBe(true);
     expect(result.resolvedSkill).toBe("vibe-scaffold");
     expect(result.intelligence?.modelEscalation?.shouldRecommend).toBe(true);
+    expect(result.artifactsCreated).toContain("PRD.draft.md");
+  });
+
+  it("/vibe.scaffold upgrades the PRD artifact to full when model escalation is accepted", () => {
+    const result = engine.run({
+      command: "/vibe.scaffold",
+      state: makeState({
+        stage: "detail",
+        projectType: "saas",
+        hasAiFeatures: true
+      }),
+      args: {
+        "accept-model-upgrade": true
+      }
+    });
+    expect(result.ok).toBe(true);
+    expect(result.artifactsCreated).toContain("PRD.full.md");
+    expect(result.intelligence?.modelEscalation?.decision).toBe("accepted");
+  });
+
+  it("/vibe.scaffold returns an explicit handoff prompt when stronger-model escalation is deferred", () => {
+    const result = engine.run(
+      ctx(
+        "/vibe.scaffold",
+        makeState({
+          stage: "detail",
+          projectType: "saas",
+          hasAiFeatures: true
+        })
+      )
+    );
+    expect(result.ok).toBe(true);
+    expect(result.warnings.some((warning) => warning.includes("re-run /vibe.scaffold --accept-model-upgrade"))).toBe(true);
+    expect(result.nextRecommendedCommand).toBe("/vibe.qa");
+    expect(result.humanNextStep).toEqual([
+      "Switch model to the latest active Anthropic flagship available to you, or GPT-5.4/Codex with xhigh reasoning.",
+      "Re-run /vibe.scaffold --accept-model-upgrade to generate PRD.full.md.",
+      "Otherwise continue to /vibe.qa with draft PRD truth only."
+    ]);
+    expect(result.checkpoint?.checkpoint).toBe("prd-threshold-reached");
+    expect(result.checkpoint?.approvals.find((approval) => approval.type === "model-escalation")?.status).toBe("deferred");
   });
 
   it("/vibe.qa runs from scaffold stage", () => {
@@ -412,7 +511,7 @@ describe("RouterEngine — artifact simulation", () => {
     const result = engine.run(
       ctx("/vibe.scaffold", makeState({ stage: "detail" }))
     );
-    expect(result.artifactsCreated).toContain("PRD.md");
+    expect(result.artifactsCreated).toContain("PRD.draft.md");
     expect(result.artifactsCreated).toContain("Memory.md");
     expect(result.artifactsCreated).toContain("anti-hallucination.md");
   });

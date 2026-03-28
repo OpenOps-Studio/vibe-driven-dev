@@ -79,6 +79,7 @@ If the user does not switch:
 - continue with the current model
 - do not block progress
 - present the artifact honestly as a draft when depth may be limited
+- return an explicit handoff prompt telling the user which stronger-model path to use and which scaffold command to re-run
 
 ## Scope
 

@@ -184,10 +184,24 @@ const CORE_ARTIFACTS: ArtifactContract[] = [
 
   // scaffold stage
   {
-    name: "PRD.md",
-    description: "Product Requirements Document",
+    name: "PRD.full.md",
+    description: "Full-depth Product Requirements Document generated with strong-model acceptance",
     producedByStage: "scaffold",
     required: true,
+    trustLevel: "trusted",
+  },
+  {
+    name: "PRD.draft.md",
+    description: "Draft Product Requirements Document generated without stronger-model escalation",
+    producedByStage: "scaffold",
+    required: true,
+    trustLevel: "trusted",
+  },
+  {
+    name: "PRD.md",
+    description: "Legacy Product Requirements Document artifact name",
+    producedByStage: "scaffold",
+    required: false,
     trustLevel: "trusted",
   },
   {
